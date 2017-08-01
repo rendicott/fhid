@@ -1,3 +1,4 @@
 {
-        "RedisEndpoint": "localhost:6379"
+        "RedisEndpoint": "localhost:6379",
+        "ListenPort": "8090"
 }
