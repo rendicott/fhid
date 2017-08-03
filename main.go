@@ -46,7 +46,6 @@ func main() {
 		os.Exit(1)
 	}
 	fhidLogger.Loggo.Info("Loaded config", "Config", fhidConfig.Config.ShowConfig())
-	fhid.Test()
 
 	http.HandleFunc("/images", fhid.ImageWrite)
 	http.HandleFunc("/healthcheck", fhid.HealthCheck)

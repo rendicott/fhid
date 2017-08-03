@@ -3,6 +3,7 @@ package fhid
 import (
 	"encoding/json"
 	"log"
+	"os"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -49,9 +50,14 @@ func (i *ImageEntry) ParseBody(rbody []byte) (err error) {
 	return err
 }
 
-func Test() {
+// Rset sets the value of keyname to value.
+func Rset(keyname, value string) error {
 	p := pools.NewResourcePool(func() (pools.Resource, error) {
 		c, err := redis.Dial("tcp", ":6379")
+		if err != nil {
+			fhidLogger.Loggo.Crit("Error connecting to Redis.", "Error", err)
+			os.Exit(1)
+		}
 		return ResourceConn{c}, err
 	}, 1, 2, time.Minute)
 	defer p.Close()
@@ -62,18 +68,11 @@ func Test() {
 	}
 	defer p.Put(r)
 	Rconn = r.(ResourceConn)
-	_, err = Rconn.Do("INFO")
-	if err != nil {
-		fhidLogger.Loggo.Error("Error connecting to Redis.", "Error", err)
-	}
-	fhidLogger.Loggo.Info("Successfully retrieved info")
-}
-
-// Rset sets the value of keyname to value.
-func Rset(keyname, value string) error {
 	n, err := Rconn.Do("SET", keyname, value)
 	if err == nil {
 		fhidLogger.Loggo.Info("Wrote entry successfully", "KeyName", keyname, "Value", n)
+	} else {
+		fhidLogger.Loggo.Error("Error writing Redis data", "Error", Rconn.Err())
 	}
 	return err
 }

@@ -66,6 +66,7 @@ func ImageWrite(w http.ResponseWriter, r *http.Request) {
 
 func messageErrorHandler(err error) string {
 	msg := fmt.Sprintf(`{"Msg":"Internal Server Error","Error":"%v"}`, err)
+	fhidLogger.Loggo.Error("Internal Server Error", "Error", err)
 	return msg
 }
 
