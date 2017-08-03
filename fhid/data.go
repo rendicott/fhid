@@ -1,6 +1,7 @@
 package fhid
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
@@ -8,6 +9,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/youtube/vitess/go/pools"
 	"golang.org/x/net/context"
+
+	"github.build.ge.com/212601587/fhid/fhidLogger"
 )
 
 var Rconn ResourceConn
@@ -19,6 +22,31 @@ type ResourceConn struct {
 
 func (r ResourceConn) Close() {
 	r.Conn.Close()
+}
+
+// ImageEntry holds the structure of the image
+// entry to push and pull to the database.
+type ImageEntry struct {
+	Version      string
+	BaseOS       string
+	ReleaseNotes string
+}
+
+// ParseBody is the method to parse the body of the ImageEntry object from
+// the web request.
+func (i *ImageEntry) ParseBody(rbody []byte) (err error) {
+	fhidLogger.Loggo.Info("Processing image body request", "Body", string(rbody))
+	err = json.Unmarshal(rbody, i)
+	if err != nil {
+		return err
+	}
+
+	srep, err := json.Marshal(i)
+	if err != nil {
+		return err
+	}
+	err = Rset(getUUID(), string(srep))
+	return err
 }
 
 func Test() {
@@ -34,20 +62,22 @@ func Test() {
 	}
 	defer p.Put(r)
 	Rconn = r.(ResourceConn)
-	n, err := Rconn.Do("INFO")
+	_, err = Rconn.Do("INFO")
 	if err != nil {
-		log.Fatal(err)
+		fhidLogger.Loggo.Error("Error connecting to Redis.", "Error", err)
 	}
-	log.Printf("info=%s", n)
-	err = rset(getUuid(), "bar")
+	fhidLogger.Loggo.Info("Successfully retrieved info")
 }
 
-func rset(keyname, value string) error {
+// Rset sets the value of keyname to value.
+func Rset(keyname, value string) error {
 	n, err := Rconn.Do("SET", keyname, value)
-	log.Printf("Wrote '%s'? '%s'", keyname, n)
+	if err == nil {
+		fhidLogger.Loggo.Info("Wrote entry successfully", "KeyName", keyname, "Value", n)
+	}
 	return err
 }
 
-func getUuid() string {
+func getUUID() string {
 	return uuid.NewV4().String()
 }
