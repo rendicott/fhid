@@ -2,9 +2,11 @@ package fhid
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"github.build.ge.com/212601587/fhid/fhidLogger"
 
@@ -38,11 +40,47 @@ func (f *status) GetStatus() (msg string) {
 	return msg
 }
 
-// ImageWrite handles the post to the database
-func ImageWrite(w http.ResponseWriter, r *http.Request) {
+// getMapKey searches for a key in a map.
+func getMapKey(m map[string]string, key string) (value string, err error) {
+	if x, found := m[key]; found {
+		return x, err
+	}
+	// if we made it here the key doesn't exist
+	return "", errors.New("key not found")
+}
+
+// HandlerImages handles the post to the database
+func HandlerImages(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
+		fhidLogger.Loggo.Info("Request URL captured", "URL", r.URL)
+		u, err := url.Parse(r.URL.String())
+		q, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			fhidLogger.Loggo.Error("Error processing URL", "Error", err)
+			http.Error(w, `{"Error": "Error processing URL"}`, http.StatusBadRequest)
+		}
+		fhidLogger.Loggo.Debug("Parsed URL query successfully", "Query", q)
+		key := "ImageId"
+		value, ok := q[key]
+		if !ok {
+			fhidLogger.Loggo.Info("Key not found in URL string", "Key", key)
+		}
+		fhidLogger.Loggo.Debug("Parsed ImageId", "ImageId", value)
+		if len(value) < 1 {
+			msg := fmt.Sprintf(`{"Error": "Key '%s' not found in URL string."}`, key)
+			http.Error(w, msg, http.StatusBadRequest)
+		} else {
+			data, err := Rget(value[0])
+			if err != nil {
+				msg := fmt.Sprintf(`{"Error": "Error fullfilling request for '%s': '%s'"}`, value, err)
+				http.Error(w, msg, http.StatusBadRequest)
+			} else {
+				fhidLogger.Loggo.Debug("Retrieved data successfully", "Data", data)
+				fmt.Fprintf(w, data)
+			}
+		}
+
 	case "POST":
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -51,9 +89,12 @@ func ImageWrite(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		image := ImageEntry{}
-		err = image.ParseBody(body)
+		key, err := image.ParseBodyWrite(body)
 		if err != nil {
 			http.Error(w, messageErrorHandler(err), http.StatusInternalServerError)
+		} else {
+			fmt.Fprintf(w, messageSuccessData(key))
+
 		}
 	case "PUT":
 		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
@@ -64,10 +105,24 @@ func ImageWrite(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func messageInvalidRequest(err error) string {
+	msg := fmt.Sprintf(`{"Msg":"Invalid Request","Error":"%v"}`, err)
+	fhidLogger.Loggo.Error("Invalid Request", "Error", err)
+	return msg
+}
+
 func messageErrorHandler(err error) string {
 	msg := fmt.Sprintf(`{"Msg":"Internal Server Error","Error":"%v"}`, err)
 	fhidLogger.Loggo.Error("Internal Server Error", "Error", err)
 	return msg
+}
+
+func messageSuccess() string {
+	return `{"Success": "True"}`
+}
+
+func messageSuccessData(s string) string {
+	return fmt.Sprintf(`{"Success": "True", "Data": "%s"}`, s)
 }
 
 func messageMethodNotAllowed() string {

@@ -33,41 +33,37 @@ type ImageEntry struct {
 	ReleaseNotes string
 }
 
-// ParseBody is the method to parse the body of the ImageEntry object from
+// ParseBodyWrite is the method to parse the body of the ImageEntry object from
 // the web request.
-func (i *ImageEntry) ParseBody(rbody []byte) (err error) {
+func (i *ImageEntry) ParseBodyWrite(rbody []byte) (key string, err error) {
 	fhidLogger.Loggo.Info("Processing image body request", "Body", string(rbody))
 	err = json.Unmarshal(rbody, i)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	srep, err := json.Marshal(i)
 	if err != nil {
-		return err
+		return "", err
 	}
-	err = Rset(getUUID(), string(srep))
-	return err
+	key = getUUID()
+	err = Rset(key, string(srep))
+	return key, err
+}
+
+// Rget returns the value of keyname.
+func Rget(keyname string) (value string, err error) {
+	value, err = redis.String(Rconn.Do("GET", keyname))
+	if err == nil {
+		fhidLogger.Loggo.Info("Retrieved entry successfully", "KeyName", keyname, "Value", value)
+		return value, err
+	}
+	fhidLogger.Loggo.Error("Error retrieving Redis data", "Error", err)
+	return "", err
 }
 
 // Rset sets the value of keyname to value.
 func Rset(keyname, value string) error {
-	p := pools.NewResourcePool(func() (pools.Resource, error) {
-		c, err := redis.Dial("tcp", ":6379")
-		if err != nil {
-			fhidLogger.Loggo.Crit("Error connecting to Redis.", "Error", err)
-			os.Exit(1)
-		}
-		return ResourceConn{c}, err
-	}, 1, 2, time.Minute)
-	defer p.Close()
-	ctx := context.TODO()
-	r, err := p.Get(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer p.Put(r)
-	Rconn = r.(ResourceConn)
 	n, err := Rconn.Do("SET", keyname, value)
 	if err == nil {
 		fhidLogger.Loggo.Info("Wrote entry successfully", "KeyName", keyname, "Value", n)
@@ -79,4 +75,29 @@ func Rset(keyname, value string) error {
 
 func getUUID() string {
 	return uuid.NewV4().String()
+}
+
+// SetupConnection tests the connection to the Redis datalayer
+func SetupConnection() error {
+	p := pools.NewResourcePool(func() (pools.Resource, error) {
+		c, err := redis.Dial("tcp", ":6379")
+		if err != nil {
+			fhidLogger.Loggo.Crit("Error connecting to Redis.", "Error", err)
+			c.Close()
+			os.Exit(1)
+		}
+		return ResourceConn{c}, err
+	}, 1, 2, time.Minute)
+	ctx := context.TODO()
+	r, err := p.Get(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	Rconn = r.(ResourceConn)
+	return err
+}
+
+// TeardownConnection closes the connection to Redis
+func TeardownConnection() {
+	Rconn.Close()
 }

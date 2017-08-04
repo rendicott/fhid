@@ -46,8 +46,15 @@ func main() {
 		os.Exit(1)
 	}
 	fhidLogger.Loggo.Info("Loaded config", "Config", fhidConfig.Config.ShowConfig())
-
-	http.HandleFunc("/images", fhid.ImageWrite)
+	fhid.SetupConnection()
+	if err != nil {
+		fhidLogger.Loggo.Error("Error in Redis test connection", "Error", err)
+		fhid.TeardownConnection()
+		os.Exit(1)
+	} else {
+		fhidLogger.Loggo.Info("Successfully connected to Redis")
+	}
+	http.HandleFunc("/images", fhid.HandlerImages)
 	http.HandleFunc("/healthcheck", fhid.HealthCheck)
 	http.ListenAndServe(":"+fhidConfig.Config.ListenPort, nil)
 
