@@ -49,6 +49,23 @@ func getMapKey(m map[string]string, key string) (value string, err error) {
 	return "", errors.New("key not found")
 }
 
+// HandlerImagesQuery handles posted queries to search
+// for images.
+func HandlerImagesQuery(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
+	case "POST":
+		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
+	case "DELETE":
+		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
+	case "PUT":
+		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
+	default:
+		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
+	}
+}
+
 // HandlerImages handles the post to the database
 func HandlerImages(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {

@@ -51,6 +51,14 @@ func (i *ImageEntry) ParseBodyWrite(rbody []byte) (key string, err error) {
 	return key, err
 }
 
+// Query takes properties of self and uses it as a
+// search query. Supports regex strings as the values.
+func (i *ImageEntry) Query() error {
+	fhidLogger.Loggo.Info("Processing image query...")
+	var err error
+	return err
+}
+
 // Rget returns the value of keyname.
 func Rget(keyname string) (value string, err error) {
 	value, err = redis.String(Rconn.Do("GET", keyname))
@@ -83,7 +91,6 @@ func SetupConnection() error {
 		c, err := redis.Dial("tcp", ":6379")
 		if err != nil {
 			fhidLogger.Loggo.Crit("Error connecting to Redis.", "Error", err)
-			c.Close()
 			os.Exit(1)
 		}
 		return ResourceConn{c}, err
