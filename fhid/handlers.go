@@ -56,7 +56,22 @@ func HandlerImagesQuery(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
 	case "POST":
-		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
+		fhidLogger.Loggo.Info("ImageQuery request")
+		fhidLogger.Loggo.Debug("ImageQuery Body captured", "Body", r.Body)
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fhidLogger.Loggo.Crit("Error processing body", "Error", err)
+		} else {
+			var query imageQuery
+			err = query.processBody(body)
+			results, err := query.execute()
+			if err != nil {
+				http.Error(w, messageErrorHandlerQuery(err), http.StatusInternalServerError)
+			} else {
+				fhidLogger.Loggo.Debug("Got query results", "Results", results)
+			}
+		}
+
 	case "DELETE":
 		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
 	case "PUT":
@@ -105,7 +120,7 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"Error": "Error reading body."}`, http.StatusBadRequest)
 			return
 		}
-		image := ImageEntry{}
+		image := imageEntry{}
 		key, err := image.ParseBodyWrite(body)
 		if err != nil {
 			http.Error(w, messageErrorHandler(err), http.StatusInternalServerError)
@@ -131,6 +146,12 @@ func messageInvalidRequest(err error) string {
 func messageErrorHandler(err error) string {
 	msg := fmt.Sprintf(`{"Msg":"Internal Server Error","Error":"%v"}`, err)
 	fhidLogger.Loggo.Error("Internal Server Error", "Error", err)
+	return msg
+}
+
+func messageErrorHandlerQuery(err error) string {
+	msg := fmt.Sprintf(`{"Msg":"Query failed.","Error":"%v"}`, err)
+	fhidLogger.Loggo.Error("Query failed", "Error", err)
 	return msg
 }
 

@@ -29,7 +29,7 @@ func (r ResourceConn) Close() {
 
 // ImageEntry holds the structure of the image
 // entry to push and pull to the database.
-type ImageEntry struct {
+type imageEntry struct {
 	ImageID      string
 	Version      string
 	BaseOS       string
@@ -38,7 +38,7 @@ type ImageEntry struct {
 
 // ParseBodyWrite is the method to parse the body of the ImageEntry object from
 // the web request.
-func (i *ImageEntry) ParseBodyWrite(rbody []byte) (key string, err error) {
+func (i *imageEntry) ParseBodyWrite(rbody []byte) (key string, err error) {
 	fhidLogger.Loggo.Info("Processing image body request", "Body", string(rbody))
 	err = json.Unmarshal(rbody, i)
 	if err != nil {
@@ -57,7 +57,7 @@ func (i *ImageEntry) ParseBodyWrite(rbody []byte) (key string, err error) {
 
 // Query takes properties of self and uses it as a
 // search query. Supports regex strings as the values.
-func (i *ImageEntry) Query() error {
+func (i *imageEntry) Query() error {
 	fhidLogger.Loggo.Info("Processing image query...")
 	var err error
 	return err

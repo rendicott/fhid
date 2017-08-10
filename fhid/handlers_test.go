@@ -13,21 +13,9 @@ import (
 	"github.build.ge.com/212601587/fhid/fhidLogger"
 )
 
-type ImagePostResponse struct {
+type imagePostResponse struct {
 	Success string
 	Data    string
-}
-
-type ImageQuerySub struct {
-	StringMatch string
-	Function    string
-	Value       string // e.g., 'latest' or '.*'
-}
-
-type ImageQuery struct {
-	Version      *ImageQuerySub
-	BaseOS       *ImageQuerySub
-	ReleaseNotes *ImageQuerySub
 }
 
 const imageGood = `
@@ -68,7 +56,7 @@ func setup() error {
 }
 
 func initLog() {
-	fhidLogger.SetLogger(false, "fhid_test.log.json", "info")
+	fhidLogger.SetLogger(false, "fhid_test.log.json", "debug")
 }
 
 func TestImageQuery(t *testing.T) {
@@ -140,7 +128,7 @@ func TestImagePostGet(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-	var j ImagePostResponse
+	var j imagePostResponse
 	err = json.Unmarshal([]byte(rr.Body.String()), &j)
 	if err != nil {
 		t.Errorf("Unable to unmarshal response JSON: %s", err)
