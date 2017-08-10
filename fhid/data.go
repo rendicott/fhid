@@ -14,6 +14,7 @@ import (
 	"github.build.ge.com/212601587/fhid/fhidLogger"
 )
 
+// Rconn is the package level redis connection
 var Rconn ResourceConn
 
 // ResourceConn adapts a Redigo connection to a Vitess Resource.
@@ -21,6 +22,7 @@ type ResourceConn struct {
 	redis.Conn
 }
 
+// Close should close the redis connection
 func (r ResourceConn) Close() {
 	r.Conn.Close()
 }
@@ -28,6 +30,7 @@ func (r ResourceConn) Close() {
 // ImageEntry holds the structure of the image
 // entry to push and pull to the database.
 type ImageEntry struct {
+	ImageID      string
 	Version      string
 	BaseOS       string
 	ReleaseNotes string
@@ -41,12 +44,13 @@ func (i *ImageEntry) ParseBodyWrite(rbody []byte) (key string, err error) {
 	if err != nil {
 		return "", err
 	}
-
+	key = getUUID()
+	i.ImageID = key
 	srep, err := json.Marshal(i)
 	if err != nil {
 		return "", err
 	}
-	key = getUUID()
+
 	err = Rset(key, string(srep))
 	return key, err
 }

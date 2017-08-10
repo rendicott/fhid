@@ -78,12 +78,12 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"Error": "Error processing URL"}`, http.StatusBadRequest)
 		}
 		fhidLogger.Loggo.Debug("Parsed URL query successfully", "Query", q)
-		key := "ImageId"
+		key := "ImageID"
 		value, ok := q[key]
 		if !ok {
 			fhidLogger.Loggo.Info("Key not found in URL string", "Key", key)
 		}
-		fhidLogger.Loggo.Debug("Parsed ImageId", "ImageId", value)
+		fhidLogger.Loggo.Debug("Parsed ImageID", "ImageID", value)
 		if len(value) < 1 {
 			msg := fmt.Sprintf(`{"Error": "Key '%s' not found in URL string."}`, key)
 			http.Error(w, msg, http.StatusBadRequest)
