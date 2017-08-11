@@ -1,0 +1,6 @@
+[user]
+	email = russell.endicott@ge.com
+	name = Russell Endicott
+[core]
+	editor = /usr/bin/vim
+    sslverify = true
