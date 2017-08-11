@@ -71,6 +71,7 @@ try {
                             checkout scm
                         }
                         stage ("ecs-control-node: pull latest binary") {
+                            // requires boto3 on the jenkins agent
                             dir ("./pipeline_runtime") {
                                 sh "${pullCommand}"
                             }
