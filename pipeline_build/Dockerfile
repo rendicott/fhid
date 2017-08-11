@@ -10,7 +10,6 @@ RUN echo "http://dl-4.alpinelinux.org/alpine/v3.1/main" >> /etc/apk/repositories
 RUN apk add --update git
 WORKDIR /root
 ADD pre-reqs.sh .
-ADD .gitconfig /root/.gitconfig
 RUN chmod +x pre-reqs.sh
 RUN /bin/sh ./pre-reqs.sh
 WORKDIR /go/src/
