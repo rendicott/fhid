@@ -32,12 +32,6 @@ const imageQuery1 = `
 }
 `
 
-const imageQuery2 = `
-{
-	"Version": {"Function": "latest"}
-}
-`
-
 const imageQuery3 = `
 {
 	"BaseOS": {"StringMatch": ".*Ubuntu.*"}
