@@ -1,14 +1,17 @@
-FROM golang:1.8.3-alpine3.5
-# Install redis
-RUN echo "http://dl-4.alpinelinux.org/alpine/v3.1/main" >> /etc/apk/repositories && \
-    apk add --update redis=2.8.23-r0 && \
-    rm -rf /var/cache/apk/* && \
-    mkdir /data && \
-    chown -R redis:redis /data && \
-    echo -e "include /etc/redis-local.conf\n" >> /etc/redis.conf
-RUN apk add --update git
+FROM centos:7
+
+RUN yum install golang git -y
+RUN yum install epel-release -y
+RUN yum update -y
+RUN yum install redis -y
+RUN mkdir -p /go/src
+ENV GOPATH=/go/src
+RUN go get "golang.org/x/net/context"
 WORKDIR /root
 ADD pre-reqs.sh .
 RUN chmod +x pre-reqs.sh
 RUN /bin/sh ./pre-reqs.sh
 WORKDIR /go/src/
+
+
+
