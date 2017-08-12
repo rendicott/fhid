@@ -11,7 +11,7 @@ WORKDIR /root
 ADD pre-reqs.sh .
 RUN chmod +x pre-reqs.sh
 RUN /bin/sh ./pre-reqs.sh
-WORKDIR /go/src/
+RUN mkdir /go/src/github.build.ge.com/212601587/fhid/
 
 
 
