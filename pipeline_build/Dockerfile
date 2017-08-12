@@ -5,13 +5,12 @@ RUN yum install epel-release -y
 RUN yum update -y
 RUN yum install redis -y
 RUN mkdir -p /go/src
-ENV GOPATH=/go/src
-RUN go get "golang.org/x/net/context"
+ENV GOPATH=/go
 WORKDIR /root
 ADD pre-reqs.sh .
 RUN chmod +x pre-reqs.sh
 RUN /bin/sh ./pre-reqs.sh
-RUN mkdir -p /go/src/github.build.ge.com/212601587/fhid/
+RUN mkdir -p /go/src/github.build.ge.com/212601587/
 
 
 
