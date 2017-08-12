@@ -19,7 +19,7 @@ target_group_arn = 'arn:aws:elasticloadbalancing:us-east-1:188894168332:targetgr
 container_name = 'fhid-stage'
 container_port = 80
 desired_count = 2
-sleeptime = 10
+sleeptime = 20
 role_arn = 'arn:aws:iam::188894168332:role/ecrAccess'
 
 fmt_logs_uri = "https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logEventViewer:group=awslogs-ecs;stream=awslogs-fhid-stage/fhid-stage/{0}"
