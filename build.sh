@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 outfile=$1
 verflag=$2
 workdir=$3
