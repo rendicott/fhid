@@ -23,6 +23,7 @@ def stageServiceName = "${productName}-service-stage"
 def stageUrl = "https://images.cloudpod.apps.ge.com/v0.0/healthcheck"
 def ecsControlNode = "docker-agent"
 def slackChannel = "#cloudpod-feed-dev"
+def jenkinsSecretBucketName = "s3-bucket-general-COPS-builds"
 
 
 try {
@@ -30,7 +31,7 @@ try {
         withCredentials([
             string(credentialsId: "cloudpod-slack-token", variable: "SLACKTOKEN"),
                          string(credentialsId: "cloudpod-slack-org", variable: "SLACKORG"),
-                         string(credentialsId: "s3-bucket-general-COPS-builds", variable: "S3BUCKET")]) 
+                         string(credentialsId: "${jenkinsSecretBucketName}", variable: "S3BUCKET")]) 
         {
             stage("cleanup") {
                 deleteDir()
@@ -60,7 +61,7 @@ try {
                     withCredentials([
                             string(credentialsId: "cloudpod-slack-token", variable: "SLACKTOKEN"),
                             string(credentialsId: "cloudpod-slack-org", variable: "SLACKORG"),
-                            string(credentialsId: "gossamer-builds-s3-bucket", variable: "S3BUCKET"),
+                            string(credentialsId: "${jenkinsSecretBucketName}", variable: "S3BUCKET"),
                             [$class: "UsernamePasswordMultiBinding", credentialsId: "dpco-s3-bucket-grabber",
                                 usernameVariable: "ACCESS_KEY_ID", passwordVariable: "SECRET_ACCESS_KEY"]]) {
                         def pullCommand = "python pull-binary.py ${S3BUCKET} ${bucketPath}${packageNameNixLatest} ${ACCESS_KEY_ID} ${SECRET_ACCESS_KEY}"
