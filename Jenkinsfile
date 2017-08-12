@@ -45,7 +45,7 @@ try {
                 }
             }
             stage ("test and build code in docker") {
-                sh "docker run --rm -e GOOS=linux -e GOARCH=amd64 -v \"${env.WORKSPACE}\":${dkrWorkdir}:Z ${dkrImageNameBuilder} /usr/bin/redis-server & && ${dkrWorkdir}/build.sh ${outfile} ${version} ${dkrWorkdir}"
+                sh "docker run --rm -e GOOS=linux -e GOARCH=amd64 -v \"${env.WORKSPACE}\":${dkrWorkdir}:Z ${dkrImageNameBuilder} ${dkrWorkdir}/build.sh ${outfile} ${version} ${dkrWorkdir}"
             }
             stage ("package") {
                 sh "cd ./build && tar zcfv ../${packageNameNix} . && cd .."
