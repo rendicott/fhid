@@ -79,8 +79,16 @@ func main() {
 	}
 	http.HandleFunc(fmt.Sprintf("/%s/images", versionMajMin), fhid.HandlerImages)
 	http.HandleFunc(fmt.Sprintf("/%s/query", versionMajMin), fhid.HandlerImagesQuery)
+
+	routeHealthcheckVersioned := fmt.Sprintf("/%s/healthcheck", versionMajMin)
+	http.HandleFunc(routeHealthcheckVersioned, fhid.HealthCheck)
+	fhidLogger.Loggo.Info("Listening on versioned healthcheck endpoint", "Endpoint", routeHealthcheckVersioned)
+
 	http.HandleFunc("/healthcheck", fhid.HealthCheck)
-	http.ListenAndServe("127.0.0.1:"+fhidConfig.Config.ListenPort, nil)
+	listenString := fhidConfig.Config.ListenHost + ":" + fhidConfig.Config.ListenPort
+
+	http.ListenAndServe(listenString, nil)
+	fhidLogger.Loggo.Info("Listening on host", "Host", listenString)
 
 }
 
