@@ -77,7 +77,7 @@ try {
                 }
             }
             stage ('notify sucess') {
-                slackSend channel: '#cloudpod-feed', color: 'good', message: "${productName} prod deployment SUCCEEDED ${prodUrl}", teamDomain: "${SLACKORG}", token:"${SLACKTOKEN}"   
+                slackSend channel: "${slackChannel}", color: 'good', message: "${productName} prod deployment SUCCEEDED ${prodUrl}", teamDomain: "${SLACKORG}", token:"${SLACKTOKEN}"   
             }
         }
     }

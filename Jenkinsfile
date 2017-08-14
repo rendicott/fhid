@@ -2,7 +2,7 @@
 // depends on credentials being set up in Jenkins ahead of time
 // along with the Dockerfile being built ahead of time as well.
 
-def majVersion = "0"
+def majVersion = "1"
 def minVersion = "0"
 def relVersion = "1"
 
