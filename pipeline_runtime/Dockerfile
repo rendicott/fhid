@@ -1,4 +1,5 @@
 FROM centos:7
+ARG CONFIG_FILE
 ADD fhid .
-ADD stage-config.json config.json
+ADD $CONFIG_FILE config.json
 RUN ./fhid -version

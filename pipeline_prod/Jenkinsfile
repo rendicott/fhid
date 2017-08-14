@@ -7,6 +7,7 @@ def outfile = "./build/fhid"
 def dkrWorkdir = "/go/src/github.build.ge.com/212601587/fhid"
 def prodECRepo = "${productName}-prod"
 def dkrImageName = "${productName}-prod"
+def configFile = "prod-config.json"
 def prodTaskDefinitionFile = 'ecs-task-prod.json'
 def prodTaskDefinitionFileTemplate = 'ecs-task-prod.json.tpl'
 def clusterName = 'COPS-tainer-cluster'
@@ -52,7 +53,7 @@ try {
             }
             stage ('ecs-control-node: build runtime docker') {
                 dir ('./pipeline_runtime') {
-                    sh "docker build . -t ${dkrImageName}"
+                    sh "docker build -e CONFIG_FILE=${configFile} . -t ${dkrImageName}"
                 }
             }
             stage ('ecs-control-node: push runtime container to prod repo') {

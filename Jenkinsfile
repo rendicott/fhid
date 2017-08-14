@@ -15,6 +15,7 @@ def outfile = "./build/fhid"
 def dkrWorkdir = "/go/src/github.build.ge.com/212601587/fhid"
 def stageECRepo = "${productName}-stage"
 def prodECRepo = "${productName}-prod"
+def configFile = "stage-config.json"
 def dkrImageNameStage = "${productName}-stage"
 def dkrImageNameProd = "${productName}-prod"
 def dkrImageNameBuilder = "${productName}-builder"
@@ -80,7 +81,7 @@ try {
                         }
                         stage ("ecs-control-node: build runtime docker") {
                             dir ("./pipeline_runtime") {
-                                sh "docker build . -t ${dkrImageNameStage}"
+                                sh "docker build -e CONFIG_FILE=${configFile} . -t ${dkrImageNameStage}"
                             }
                         }
                         stage ("ecs-control-node: push runtime container to stage repo") {
