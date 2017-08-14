@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.build.ge.com/212601587/fhid/fhidConfig"
+
 	"github.com/garyburd/redigo/redis"
 	uuid "github.com/satori/go.uuid"
 	"github.com/youtube/vitess/go/pools"
@@ -92,7 +94,7 @@ func getUUID() string {
 // SetupConnection tests the connection to the Redis datalayer
 func SetupConnection() error {
 	p := pools.NewResourcePool(func() (pools.Resource, error) {
-		c, err := redis.Dial("tcp", ":6379")
+		c, err := redis.Dial("tcp", fhidConfig.Config.RedisEndpoint)
 		if err != nil {
 			fhidLogger.Loggo.Crit("Error connecting to Redis.", "Error", err)
 			os.Exit(1)

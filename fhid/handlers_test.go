@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	"github.build.ge.com/212601587/fhid/fhidConfig"
 	"github.build.ge.com/212601587/fhid/fhidLogger"
 )
 
@@ -38,12 +40,47 @@ const imageQuery3 = `
 }
 `
 
+func writeConfigFile() (*bytes.Buffer, error) {
+	seed := `{
+        "RedisEndpoint": "localhost:6379",
+        "ListenPort": "8090"
+}`
+	var b bytes.Buffer
+	_, err := b.WriteString(seed)
+	if err != nil {
+		fmt.Println("error: ", err)
+		return &b, err
+	}
+	return &b, err
+}
+
+func writeBufferToFile(filename string, b *bytes.Buffer) error {
+	err := ioutil.WriteFile(filename, b.Bytes(), 0644)
+	return err
+}
+
+func deleteFile(filename string) {
+	err := os.Remove(filename)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func setup() error {
-	err := SetupConnection()
+	filename := "handlers_test_config_temp.json"
+	configbuff, err := writeConfigFile()
+	err = writeBufferToFile(filename, configbuff)
+	if err != nil {
+		fhidLogger.Loggo.Error("Error writing temp config file", "Error", err)
+		return err
+	}
+	defer deleteFile(filename)
+	err = fhidConfig.SetConfig(filename)
+	err = SetupConnection()
 	if err != nil {
 		fhidLogger.Loggo.Error("Error in Redis test connection", "Error", err)
 		TeardownConnection()
-		os.Exit(1)
+		return err
 	}
 	return err
 
