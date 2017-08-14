@@ -1,5 +1,5 @@
 {
-        "RedisEndpoint": "haha.com:6379",
+        "RedisEndpoint": "bob-bldr-prod.59holx.ng.0001.use1.cache.amazonaws.com:6379",
         "ListenPort": "8090",
         "ListenHost": "0.0.0.0"
 }
