@@ -13,17 +13,8 @@ import (
 	"github.build.ge.com/212601587/fhid/fhidConfig"
 )
 
-// Status is an object to hold system status
+// status is an object to hold system status
 // to be returned by things like the healthcheck handler
-var Status *status
-
-func init() {
-	Status = &status{}
-	Status.State = "Healthy"
-	// Status.Version = &fhidConfig.Config.Version
-	Status.Version = fhidConfig.Version
-}
-
 type status struct {
 	State   string `json:"State"`
 	Version string `json:"Version"`
@@ -31,7 +22,7 @@ type status struct {
 
 // GetStatus returns the current string export of the
 // FhidStatus struct.
-func (f *status) GetStatus() (msg string) {
+func (f *status) getStatus() (msg string) {
 	b, err := json.Marshal(f)
 	if err != nil {
 		msg = fmt.Sprintf(`{"State":"Unhealthy","Version":"%s"}`, fhidConfig.Version)
@@ -169,6 +160,10 @@ func messageMethodNotAllowed() string {
 
 // HealthCheck is a health check handler.
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
-	msg := Status.GetStatus()
+	status := &status{}
+	status.State = "Healthy"
+	// Status.Version = &fhidConfig.Config.Version
+	status.Version = fhidConfig.Version
+	msg := status.getStatus()
 	fmt.Fprintf(w, msg)
 }
