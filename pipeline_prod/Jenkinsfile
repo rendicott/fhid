@@ -38,7 +38,7 @@ try {
                 string(credentialsId: "${jenkinsSecretBucketName}", variable: 'S3BUCKET'),
                 [$class: 'UsernamePasswordMultiBinding', credentialsId: 'dpco-s3-bucket-grabber',
                     usernameVariable: 'ACCESS_KEY_ID', passwordVariable: 'SECRET_ACCESS_KEY']]) {
-            def pullCommand = "python pull-api-read.py ${S3BUCKET} ${bucketPath}${deployPackage} ${ACCESS_KEY_ID} ${SECRET_ACCESS_KEY}"
+            def pullCommand = "python pull-binary.py ${S3BUCKET} ${bucketPath}${deployPackage} ${ACCESS_KEY_ID} ${SECRET_ACCESS_KEY}"
             stage('cleanup') {
                 deleteDir()
             }
