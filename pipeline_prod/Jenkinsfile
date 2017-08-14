@@ -1,0 +1,99 @@
+// pipeline script to build fhid prod container and create/run
+// the fhid prod ecs service
+
+def productName = "fhid"
+def bucketPath = "builds-fhid/"
+def outfile = "./build/fhid"
+def dkrWorkdir = "/go/src/github.build.ge.com/212601587/fhid"
+def prodECRepo = "${productName}-prod"
+def dkrImageName = "${productName}-prod"
+def prodTaskDefinitionFile = 'ecs-task-prod.json'
+def prodTaskDefinitionFileTemplate = 'ecs-task-prod.json.tpl'
+def clusterName = 'COPS-tainer-cluster'
+def prodServiceName = "${productName}-service-prod"
+def ecsControlNode = "docker-agent"
+def jenkinsSecretBucketName = "s3-bucket-general-COPS-builds"
+def slackChannel = "#cloudpod-feed-dev"
+def deployVersion = ""
+
+stage('input') {
+    deployVersion = input( id: 'deployVersion', 
+                           message: 'Which version would you like to deploy to prod (omit "v")? ', 
+                           ok: 'ok', 
+                           parameters: [string(defaultValue: '2.0.1.45',
+                                        description: '.....',
+                                        name: 'deployVersion')] ) 
+}
+def deployPackage = "${productName}-linux-amd64-${deployVersion}.tar.gz"
+def chunks = deployVersion.tokenize('.')
+def versionMajMin = "v" + chunks[0] + "." + chunks[1]
+def prodUrl = "https://images.cloudpod.apps.ge.com/${versionMajMin}/healthcheck"
+echo "Detected versionMajMin as " + versionMajMin
+
+try {
+    node(ecsControlNode) {
+        withCredentials([
+                string(credentialsId: 'cloudpod-slack-token', variable: 'SLACKTOKEN'),
+                string(credentialsId: 'cloudpod-slack-org', variable: 'SLACKORG'),
+                string(credentialsId: "${jenkinsSecretBucketName}", variable: 'S3BUCKET'),
+                [$class: 'UsernamePasswordMultiBinding', credentialsId: 'dpco-s3-bucket-grabber',
+                    usernameVariable: 'ACCESS_KEY_ID', passwordVariable: 'SECRET_ACCESS_KEY']]) {
+            def pullCommand = "python pull-api-read.py ${S3BUCKET} ${bucketPath}${deployPackage} ${ACCESS_KEY_ID} ${SECRET_ACCESS_KEY}"
+            stage('cleanup') {
+                deleteDir()
+            }
+            stage ('ecs-control-node: checkout source') {
+                checkout scm
+            }
+            stage ('ecs-control-node: pull desired binary') {
+                dir ('./pipeline_runtime') {
+                    sh "${pullCommand}"
+                }
+            }
+            stage ('ecs-control-node: build runtime docker') {
+                dir ('./pipeline_runtime') {
+                    sh "docker build . -t ${dkrImageName}"
+                }
+            }
+            stage ('ecs-control-node: push runtime container to prod repo') {
+                dir ('./pipeline_runtime') {
+                    sh "python ecr-pusher.py ${prodECRepo} ${dkrImageName} ${deployVersion}" 
+                }
+            }
+            stage ('ecs-control-node: kill existing prod env') {
+                dir ('./pipeline_runtime') {
+                    sh "python ecs-killer.py ${clusterName} ${prodServiceName}" 
+                }
+            }
+            stage ('ecs-control-node: generate task definition') {
+                dir ('./pipeline_runtime') {
+                    sh "python task-templater.py ${prodTaskDefinitionFileTemplate} ${deployVersion} ${prodTaskDefinitionFile}" 
+                }
+            }
+            stage ('ecs-control-node: create prod task, start task, then create service') {
+                dir ('./pipeline_runtime') {
+                    sh 'sleep 10'
+                    sh "python ecs-tasker-servicer-prod.py ${prodTaskDefinitionFile} ${clusterName}" 
+                }
+            }
+            stage ('notify sucess') {
+                slackSend channel: '#cloudpod-feed', color: 'good', message: "${productName} prod deployment SUCCEEDED ${prodUrl}", teamDomain: "${SLACKORG}", token:"${SLACKTOKEN}"   
+            }
+        }
+    }
+} catch (error) {
+    withCredentials([string(credentialsId: 'cloudpod-slack-token', variable: 'SLACKTOKEN'),
+                     string(credentialsId: 'cloudpod-slack-org', variable: 'SLACKORG')])
+    {
+        stage ('notify failure') {
+            slackSend channel: "${slackChannel}", color: 'bad', message: "${productName} prod deployment FAILED ${env.BUILD_URL}", teamDomain: "${SLACKORG}", token:"${SLACKTOKEN}"   
+        }
+    }
+} finally {
+    node ("${ecsControlNode}"){
+        stage('post build cleanup') {
+            sh "rm -rf ${env.WORKSPACE}/*"
+        }
+    }
+}
+

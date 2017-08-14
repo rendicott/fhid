@@ -115,12 +115,6 @@ try {
                     }
                 }
             }
-
-            stage ("notify") {
-                echo "SUCCESS"
-                slackSend channel: "${slackChannel}", color: "good", message: "${productName} build SUCCESS. Nix package: https://s3.amazonaws.com/${S3BUCKET}/${bucketPath}${packageNameNix}", teamDomain: "${SLACKORG}", token:"${SLACKTOKEN}"  
-            }
-            
         }
     }
 } catch (error) {
