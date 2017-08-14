@@ -81,7 +81,7 @@ try {
                         }
                         stage ("ecs-control-node: build runtime docker") {
                             dir ("./pipeline_runtime") {
-                                sh "docker build -e CONFIG_FILE=${configFile} . -t ${dkrImageNameStage}"
+                                sh "docker build --build-arg CONFIG_FILE=${configFile} . -t ${dkrImageNameStage}"
                             }
                         }
                         stage ("ecs-control-node: push runtime container to stage repo") {
