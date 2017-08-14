@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"regexp"
 
 	"github.build.ge.com/212601587/fhid/fhid"
 	"github.build.ge.com/212601587/fhid/fhidConfig"
@@ -18,24 +20,45 @@ func main() {
 	var configFile string
 	var logLevel string
 	var logFile string
+	var versionOverride string
+	var versionDefault string
+	var versionMajMin string
 	var versionFlag bool
 	var daemonFlag bool
+	versionDefault = "v1.0"
 	flag.StringVar(&configFile, "c", "./config.json", "Path to config file.")
 	flag.StringVar(&logFile, "logfile", "fhid.log.json", "JSON logfile location")
 	flag.StringVar(&logLevel, "loglevel", "info", "Log level (info or debug)")
+	flag.StringVar(&versionOverride, "vlo", "", "If you wish to override the version listener reported during runtime. Affects the API route handlers (e.g., '/v2.3/healthcheck' in the format of vN.N where N is an int")
 	flag.BoolVar(&versionFlag, "version", false, "print version and exit")
 	flag.BoolVar(&daemonFlag, "daemon", false, "run as daemon with no stdout")
 	flag.Parse()
+
+	if version == "" {
+		version = versionDefault
+	}
+	// get a vX.X form of the version no matter what happens
+	if versionOverride != "" {
+		versionMajMin = versionSplitter(versionOverride, versionDefault)
+	} else {
+		versionMajMin = versionSplitter(version, versionDefault)
+	}
+
+	if versionFlag {
+		log.Printf("fhid %s\n", version)
+		log.Printf("major/minor handler version = %s\n", versionMajMin)
+		os.Exit(0)
+	}
 	// if daemon just log to file
 	fhidLogger.SetLogger(daemonFlag, logFile, logLevel)
-	if configFile == "" {
-		fhidLogger.Loggo.Crit("Please specify config file with -c flag")
-		os.Exit(1)
-	}
-	version = getVersion()
+
 	if versionFlag {
 		fmt.Printf("fhid %s\n", version)
 		os.Exit(0)
+	}
+	if configFile == "" {
+		fhidLogger.Loggo.Crit("Please specify config file with -c flag")
+		os.Exit(1)
 	}
 	err := fhidConfig.SetConfig(configFile)
 	fhidConfig.Version = version
@@ -54,16 +77,23 @@ func main() {
 	} else {
 		fhidLogger.Loggo.Info("Successfully connected to Redis")
 	}
-	http.HandleFunc("/images", fhid.HandlerImages)
-	http.HandleFunc("/query", fhid.HandlerImagesQuery)
+	http.HandleFunc(fmt.Sprintf("/%s/images", versionMajMin), fhid.HandlerImages)
+	http.HandleFunc(fmt.Sprintf("/%s/query", versionMajMin), fhid.HandlerImagesQuery)
 	http.HandleFunc("/healthcheck", fhid.HealthCheck)
 	http.ListenAndServe("127.0.0.1:"+fhidConfig.Config.ListenPort, nil)
 
 }
 
-func getVersion() string {
-	if version == "" {
-		version = "0.0"
+func versionSplitter(fullver string, override string) (verMinMaj string) {
+	r := regexp.MustCompile(`(v[0-9]*\d\.[0-9]*)`)
+	if len(fullver) < 3 {
+		return override
+	} else {
+		s := r.FindString(fullver)
+		if len(s) < 4 {
+			return override
+		} else {
+			return s
+		}
 	}
-	return version
 }

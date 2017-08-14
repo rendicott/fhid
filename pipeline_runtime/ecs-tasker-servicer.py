@@ -18,7 +18,7 @@ service_name = 'fhid-service-stage'
 target_group_arn = 'arn:aws:elasticloadbalancing:us-east-1:188894168332:targetgroup/tg-fhid-stage/597e8afd93568c05'
 container_name = 'fhid-stage'
 container_port = 8090
-desired_count = 2
+desired_count = 1
 sleeptime = 20
 role_arn = 'arn:aws:iam::188894168332:role/ecrAccess'
 

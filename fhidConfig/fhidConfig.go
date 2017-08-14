@@ -19,6 +19,7 @@ var Version string
 type Configuration struct {
 	RedisEndpoint string
 	ListenPort    string
+	ListenHost    string
 }
 
 // ShowConfig returns a string of log formatted
@@ -27,6 +28,7 @@ func (*Configuration) ShowConfig() string {
 	msg := fmt.Sprintf("\n")
 	msg += fmt.Sprintf("CONFIGURATION: RedisEndpoint = '%s'\n", Config.RedisEndpoint)
 	msg += fmt.Sprintf("CONFIGURATION: ListenPort = '%s'\n", Config.ListenPort)
+	msg += fmt.Sprintf("CONFIGURATION: ListenHost = '%s'\n", Config.ListenHost)
 	return msg
 }
 

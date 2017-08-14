@@ -43,7 +43,8 @@ const imageQuery3 = `
 func writeConfigFile() (*bytes.Buffer, error) {
 	seed := `{
         "RedisEndpoint": "localhost:6379",
-        "ListenPort": "8090"
+        "ListenPort": "8090",
+		"ListenHost": "127.0.0.1"
 }`
 	var b bytes.Buffer
 	_, err := b.WriteString(seed)

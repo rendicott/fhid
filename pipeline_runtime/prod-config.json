@@ -1,4 +1,5 @@
 {
         "RedisEndpoint": "haha.com:6379",
-        "ListenPort": "8090"
+        "ListenPort": "8090",
+        "ListenHost": "0.0.0.0"
 }

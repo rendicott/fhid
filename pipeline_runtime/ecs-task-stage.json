@@ -22,7 +22,7 @@
             },
             "name": "fhid-stage",
             "image": "188894168332.dkr.ecr.us-east-1.amazonaws.com/fhid-stage:latest",
-            "command": ["./fhid","-c","config.json","-loglevel","debug"],
+            "command": ["./fhid","-c","config.json","-loglevel","debug","-vlo", "v0.0"],
             "cpu": 0,
             "ulimits": [
                 {
