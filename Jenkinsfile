@@ -15,7 +15,8 @@ def outfile = "./build/fhid"
 def dkrWorkdir = "/go/src/github.build.ge.com/212601587/fhid"
 def stageECRepo = "${productName}-stage"
 def prodECRepo = "${productName}-prod"
-def dkrImageName = "${productName}-runtime"
+def dkrImageNameStage = "${productName}-stage"
+def dkrImageNameProd = "${productName}-prod"
 def dkrImageNameBuilder = "${productName}-builder"
 def stageTaskDefinitionFile = "ecs-task-stage.json"
 def clusterName = "COPS-tainer-cluster"
@@ -79,12 +80,12 @@ try {
                         }
                         stage ("ecs-control-node: build runtime docker") {
                             dir ("./pipeline_runtime") {
-                                sh "docker build . -t ${dkrImageName}"
+                                sh "docker build . -t ${dkrImageNameStage}"
                             }
                         }
                         stage ("ecs-control-node: push runtime container to stage repo") {
                             dir ("./pipeline_runtime") {
-                                sh "python ecr-pusher.py ${stageECRepo} ${dkrImageName} ${version}" 
+                                sh "python ecr-pusher.py ${stageECRepo} ${dkrImageNameStage} ${version}" 
                             }
                         }
                         stage ("ecs-control-node: kill existing staging env") {
