@@ -11,6 +11,10 @@ fire up a local redis server then run `go run main.go -c dev-config.json -loglev
 You can post json to the `/images` handler
 and then `GET` to the `/images` handler with a query like `/images?ImageId=d07d13d9-b666-46d6-986f-a57c4ee8e971`
 
+_Testing_
+
+To test make sure you have a local Redis server running on `127.0.0.1:6379` and then run `go test ./... -v` from the root of the repo.
+
 
 # Usage
 
