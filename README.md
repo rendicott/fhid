@@ -47,4 +47,5 @@ For example, to search for an image with `Ubuntu` in the `BaseOS` field:
 ## supported queries
 
 | function name | supported values | description |
+|---------------|------------------|-------------|
 | `StringMatch` | regex patterns   | compiles the regex pattern and uses it to search the given field |
