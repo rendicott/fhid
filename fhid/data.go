@@ -83,6 +83,14 @@ func Rset(keyname, value string) error {
 		fhidLogger.Loggo.Info("Wrote entry successfully", "KeyName", keyname, "Value", n)
 	} else {
 		fhidLogger.Loggo.Error("Error writing Redis data", "Error", Rconn.Err())
+		return err
+	}
+	n, err = Rconn.Do("SADD", fhidConfig.Config.RedisImageIndexSet, keyname)
+	if err == nil {
+		fhidLogger.Loggo.Debug("Successfully wrote keyname to index", "KeyName", keyname, "Index", fhidConfig.Config.RedisImageIndexSet)
+	} else {
+		fhidLogger.Loggo.Error("Error writing index entry", "Error", Rconn.Err())
+		return err
 	}
 	return err
 }

@@ -17,9 +17,10 @@ var Version string
 // Configuration is a struct used
 // to build the exported Config variable
 type Configuration struct {
-	RedisEndpoint string
-	ListenPort    string
-	ListenHost    string
+	RedisEndpoint      string
+	RedisImageIndexSet string
+	ListenPort         string
+	ListenHost         string
 }
 
 // ShowConfig returns a string of log formatted
@@ -29,6 +30,7 @@ func (*Configuration) ShowConfig() string {
 	msg += fmt.Sprintf("CONFIGURATION: RedisEndpoint = '%s'\n", Config.RedisEndpoint)
 	msg += fmt.Sprintf("CONFIGURATION: ListenPort = '%s'\n", Config.ListenPort)
 	msg += fmt.Sprintf("CONFIGURATION: ListenHost = '%s'\n", Config.ListenHost)
+	msg += fmt.Sprintf("CONFIGURATION: RedisImageIndexSet = '%s'\n", Config.RedisImageIndexSet)
 	return msg
 }
 
