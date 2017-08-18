@@ -1,8 +1,6 @@
 package fhid
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,33 +10,6 @@ import (
 
 	"github.build.ge.com/212601587/fhid/fhidConfig"
 )
-
-// status is an object to hold system status
-// to be returned by things like the healthcheck handler
-type status struct {
-	State   string `json:"State"`
-	Version string `json:"Version"`
-}
-
-// GetStatus returns the current string export of the
-// FhidStatus struct.
-func (f *status) getStatus() (msg string) {
-	b, err := json.Marshal(f)
-	if err != nil {
-		msg = fmt.Sprintf(`{"State":"Unhealthy","Version":"%s"}`, fhidConfig.Version)
-	}
-	msg = string(b)
-	return msg
-}
-
-// getMapKey searches for a key in a map.
-func getMapKey(m map[string]string, key string) (value string, err error) {
-	if x, found := m[key]; found {
-		return x, err
-	}
-	// if we made it here the key doesn't exist
-	return "", errors.New("key not found")
-}
 
 // HandlerImagesQuery handles posted queries to search
 // for images.
@@ -126,36 +97,6 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)
 	}
-}
-
-func messageInvalidRequest(err error) string {
-	msg := fmt.Sprintf(`{"Msg":"Invalid Request","Error":"%v"}`, err)
-	fhidLogger.Loggo.Error("Invalid Request", "Error", err)
-	return msg
-}
-
-func messageErrorHandler(err error) string {
-	msg := fmt.Sprintf(`{"Msg":"Internal Server Error","Error":"%v"}`, err)
-	fhidLogger.Loggo.Error("Internal Server Error", "Error", err)
-	return msg
-}
-
-func messageErrorHandlerQuery(err error) string {
-	msg := fmt.Sprintf(`{"Msg":"Query failed.","Error":"%v"}`, err)
-	fhidLogger.Loggo.Error("Query failed", "Error", err)
-	return msg
-}
-
-func messageSuccess() string {
-	return `{"Success": "True"}`
-}
-
-func messageSuccessData(s string) string {
-	return fmt.Sprintf(`{"Success": "True", "Data": "%s"}`, s)
-}
-
-func messageMethodNotAllowed() string {
-	return `{"Error":"Method not allowed"}`
 }
 
 // HealthCheck is a health check handler.
