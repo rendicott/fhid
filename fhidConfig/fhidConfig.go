@@ -44,8 +44,5 @@ func SetConfig(filename string) error {
 	}
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&Config)
-	if err != nil {
-		return err
-	}
 	return err
 }
