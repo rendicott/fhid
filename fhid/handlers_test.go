@@ -46,13 +46,13 @@ const imageGoodExpected = `
 
 const imageGoodNonMatcher = `
 {
-"Version":"3.4.3.99",
-"BaseOS":"Centos7",
+"Version":"9999999999",
+"BaseOS":"Winders",
 "ReleaseNotes":"bar foo"
 }
 `
 
-const expectedResponseImageSearch = `
+const expectedResponseImageQueryReleaseNotes = `
 {
 "Results": [
 {
@@ -71,19 +71,35 @@ const expectedResponseImageSearch = `
 }
 `
 
-const imageQuery1 = `
+const expectedResponseImageQueryVersion = `
+{
+"Results":[{
+"Version":"1.2.3.145",
+"BaseOS":"Ubuntu14.04",
+"ReleaseNotes":"Did the thing"}]}
+`
+
+const expectedResponseImageQueryBaseOS = `
+{
+"Results":[{
+"Version":"1.2.3.145",
+"BaseOS":"Ubuntu14.04",
+"ReleaseNotes":"Did the thing"}]}
+`
+
+const imageQueryVersion = `
 {
 	"Version": {"StringMatch": "1.2.3.145"}
 }
 `
 
-const imageQuery2 = `
+const imageQueryReleaseNotes = `
 {
 	"ReleaseNotes": {"StringMatch": ".*Did.*"}
 }
 `
 
-const imageQuery3 = `
+const imageQueryBaseOS = `
 {
 	"BaseOS": {"StringMatch": ".*Ubuntu.*"}
 }
@@ -112,6 +128,9 @@ func resultsMatchExpected(results, expected string) (match bool, err error) {
 	// now loop through the expected and match one for one to results
 	// except for ImageID since it's GUUID and changes every time
 	match = true
+	if len(iqrWant.Results) != len(iqrWant.Results) {
+		return false, err
+	}
 	for idx, exp := range iqrWant.Results {
 		switch {
 		case exp.Version != iqrGot.Results[idx].Version:
@@ -194,7 +213,54 @@ func runFakeRedis() (addr string, err error) {
 	return addr, err
 }
 
-func TestImageQuery2(t *testing.T) {
+func seedQueryData() error {
+	postBody := bytes.NewBufferString(imageGood)
+	req, err := http.NewRequest("POST", "/images/?Score=0", postBody)
+	if err != nil {
+		return err
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HandlerImages)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusOK)
+	}
+	var j imagePostResponse
+	err = json.Unmarshal([]byte(rr.Body.String()), &j)
+	if err != nil {
+		fhidLogger.Loggo.Error("Unable to unmarshal response JSON",
+			"Error", err)
+		return err
+	}
+
+	// write a second entry
+	postBody = bytes.NewBufferString(imageGood2)
+	req, err = http.NewRequest("POST", "/images/?Score=1", postBody)
+	if err != nil {
+		return err
+	}
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusOK)
+	}
+
+	// write a third entry that shouldn't match query
+	postBody = bytes.NewBufferString(imageGoodNonMatcher)
+	req, err = http.NewRequest("POST", "/images/?Score=2", postBody)
+	if err != nil {
+		return err
+	}
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusOK)
+	}
+	return err
+}
+
+func TestImageQueryReleaseNotes(t *testing.T) {
 	initLog()
 	// we initialize the fake redis instance
 	addr, err := runFakeRedis()
@@ -210,60 +276,61 @@ func TestImageQuery2(t *testing.T) {
 	// We have to use the score URL query so we force order or results
 	// since the Redis index set we're using is a sorted set and only
 	// sorts if proper score weights are given.
-	postBody := bytes.NewBufferString(imageGood)
-	req, err := http.NewRequest("POST", "/images/?Score=0", postBody)
+	err = seedQueryData()
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("Error seeding query data. '%s'", err)
 	}
+	// set up response recorder
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HandlerImages)
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-	var j imagePostResponse
-	err = json.Unmarshal([]byte(rr.Body.String()), &j)
-	if err != nil {
-		t.Errorf("Unable to unmarshal response JSON: %s", err)
-	}
-	fmt.Printf("Parsed j.Data into '%s'", j.Data)
-
-	// write a second entry
-	postBody = bytes.NewBufferString(imageGood2)
-	req, err = http.NewRequest("POST", "/images/?Score=1", postBody)
-	if err != nil {
-		t.Fatal(err)
-	}
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	// write a third entry that shouldn't match query
-	postBody = bytes.NewBufferString(imageGoodNonMatcher)
-	req, err = http.NewRequest("POST", "/images/?Score=2", postBody)
-	if err != nil {
-		t.Fatal(err)
-	}
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	queryBody := bytes.NewBufferString(imageQuery2)
-
-	req, err = http.NewRequest("POST", "/image_query", queryBody)
+	queryBody := bytes.NewBufferString(imageQueryReleaseNotes)
+	req, err := http.NewRequest("POST", "/image_query", queryBody)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rr = httptest.NewRecorder()
-	handler = http.HandlerFunc(HandlerImagesQuery)
+	handler := http.HandlerFunc(HandlerImagesQuery)
 	handler.ServeHTTP(rr, req)
 	// Check the response body is what we expect.
-	expected := strings.Replace(expectedResponseImageSearch, "\n", "", -1)
+	expected := strings.Replace(expectedResponseImageQueryReleaseNotes, "\n", "", -1)
+	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	if !match {
+		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestImageQueryVersion(t *testing.T) {
+	initLog()
+	// we initialize the fake redis instance
+	addr, err := runFakeRedis()
+	fhidLogger.Loggo.Info("Done starting fake Redis.")
+	if err != nil {
+		t.Errorf("Unable to start fake Redis for testing: %s", err)
+	}
+	err = setup(true, addr)
+	if err != nil {
+		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
+	}
+	// First we need to post some entries to the DB
+	// We have to use the score URL query so we force order or results
+	// since the Redis index set we're using is a sorted set and only
+	// sorts if proper score weights are given.
+	err = seedQueryData()
+	if err != nil {
+		t.Errorf("Error seeding query data. '%s'", err)
+	}
+	// set up response recorder
+	rr := httptest.NewRecorder()
+	queryBody := bytes.NewBufferString(imageQueryVersion)
+	req, err := http.NewRequest("POST", "/image_query", queryBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr = httptest.NewRecorder()
+	handler := http.HandlerFunc(HandlerImagesQuery)
+	handler.ServeHTTP(rr, req)
+	// Check the response body is what we expect.
+	expected := strings.Replace(expectedResponseImageQueryVersion, "\n", "", -1)
 	match, err := resultsMatchExpected(rr.Body.String(), expected)
 	if !match {
 		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
@@ -343,6 +410,45 @@ func TestImagePostGetReal(t *testing.T) {
 	match, err := resultsMatchExpected(rr.Body.String(), expected)
 	if !match {
 		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestImageQueryBaseOS(t *testing.T) {
+	initLog()
+	// we initialize the fake redis instance
+	addr, err := runFakeRedis()
+	fhidLogger.Loggo.Info("Done starting fake Redis.")
+	if err != nil {
+		t.Errorf("Unable to start fake Redis for testing: %s", err)
+	}
+	err = setup(true, addr)
+	if err != nil {
+		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
+	}
+	// First we need to post some entries to the DB
+	// We have to use the score URL query so we force order or results
+	// since the Redis index set we're using is a sorted set and only
+	// sorts if proper score weights are given.
+	err = seedQueryData()
+	if err != nil {
+		t.Errorf("Error seeding query data. '%s'", err)
+	}
+	// set up response recorder
+	rr := httptest.NewRecorder()
+	queryBody := bytes.NewBufferString(imageQueryBaseOS)
+	req, err := http.NewRequest("POST", "/image_query", queryBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr = httptest.NewRecorder()
+	handler := http.HandlerFunc(HandlerImagesQuery)
+	handler.ServeHTTP(rr, req)
+	// Check the response body is what we expect.
+	expected := strings.Replace(expectedResponseImageQueryBaseOS, "\n", "", -1)
+	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	if !match {
+		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
 			rr.Body.String(), expected)
 	}
 }

@@ -65,7 +65,7 @@ func (i *imageEntry) ParseBodyWrite(rbody []byte, score int) (key string, err er
 func Rget(keyname string) (value string, err error) {
 	value, err = redis.String(Rconn.Do("GET", keyname))
 	if err == nil {
-		fhidLogger.Loggo.Info("Retrieved entry successfully", "KeyName", keyname, "Value", value)
+		fhidLogger.Loggo.Debug("Retrieved entry successfully", "KeyName", keyname, "Value", value)
 		return value, err
 	}
 	fhidLogger.Loggo.Error("Error retrieving Redis data", "Error", err)

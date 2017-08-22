@@ -50,11 +50,13 @@ func (iq *imageQuery) processBody(rbody []byte) error {
 func (iq *imageQuery) search(ie *imageEntry) (match bool, err error) {
 	switch {
 	case iq.Version.StringMatch != "":
-		fi.Loggo.Info("Detected StringMatch on Version")
+		fi.Loggo.Debug("Detected StringMatch on Version")
+		match, err = iq.stringMatch(ie.Version, iq.Version.StringMatch)
 	case iq.BaseOS.StringMatch != "":
-		fi.Loggo.Info("Detected StringMatch on BaseOS")
+		fi.Loggo.Debug("Detected StringMatch on BaseOS")
+		match, err = iq.stringMatch(ie.BaseOS, iq.BaseOS.StringMatch)
 	case iq.ReleaseNotes.StringMatch != "":
-		fi.Loggo.Info("Detected StringMatch on ReleaseNotes")
+		fi.Loggo.Debug("Detected StringMatch on ReleaseNotes")
 		match, err = iq.stringMatch(ie.ReleaseNotes, iq.ReleaseNotes.StringMatch)
 	default:
 		fi.Loggo.Info("No queries could be parsed.")
