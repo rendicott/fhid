@@ -22,7 +22,7 @@ To test make sure you have a local Redis server running on `127.0.0.1:6379` and 
 
 Submitting an entry would look something like this:
 ```
-curl -XPOST http://localhost:8090 -d '{
+curl -XPOST http://localhost:8090/images -d '{
 "Version": "1.2.3.142",
 "BaseOS": "Centos6.6",
 "ReleaseNotes": "Stuff"
