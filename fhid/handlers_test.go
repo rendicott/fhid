@@ -37,21 +37,37 @@ const imageGood2 = `
 }
 `
 
+const imageGoodExpected = `
+{
+"Results":[{
+"Version":"1.2.3.145",
+"BaseOS":"Ubuntu14.04",
+"ReleaseNotes":"Did the thing"}]}`
+
+const imageGoodNonMatcher = `
+{
+"Version":"3.4.3.99",
+"BaseOS":"Centos7",
+"ReleaseNotes":"bar foo"
+}
+`
+
 const expectedResponseImageSearch = `
 {
-	"Results": [
-		{
-			"Version":"3.4.3.99",
-			"BaseOS":"Centos7",
-			"ReleaseNotes":"Did the thing again"
-		},
-		{
-			"Version":"1.2.3.145",
-			"BaseOS":"Ubuntu14.04",
-			"ReleaseNotes":"Did the thing"
-		}
-		]
-
+"Results": [
+{
+"ImageID": ".*",
+"Version":"1.2.3.145",
+"BaseOS":"Ubuntu14.04",
+"ReleaseNotes":"Did the thing"
+},
+{
+"ImageID": ".*",
+"Version":"3.4.3.99",
+"BaseOS":"Centos7",
+"ReleaseNotes":"Did the thing again"
+}
+]
 }
 `
 
@@ -61,11 +77,53 @@ const imageQuery1 = `
 }
 `
 
+const imageQuery2 = `
+{
+	"ReleaseNotes": {"StringMatch": ".*Did.*"}
+}
+`
+
 const imageQuery3 = `
 {
 	"BaseOS": {"StringMatch": ".*Ubuntu.*"}
 }
 `
+
+func resultsMatchExpected(results, expected string) (match bool, err error) {
+	fhidLogger.Loggo.Info("Checking to see if results match expected.")
+	// unmarshal actual results
+	var iqrGot imageQueryResults
+	bresults := []byte(results)
+	err = json.Unmarshal(bresults, &iqrGot)
+	if err != nil {
+		fhidLogger.Loggo.Error("Error unmarshaling query results", "Error", err)
+		return false, err
+	}
+
+	// unmarshal expected results
+	var iqrWant imageQueryResults
+	bexpected := []byte(expected)
+	err = json.Unmarshal(bexpected, &iqrWant)
+	if err != nil {
+		fhidLogger.Loggo.Error("Error unmarshaling expected results", "Error", err)
+		return false, err
+	}
+
+	// now loop through the expected and match one for one to results
+	// except for ImageID since it's GUUID and changes every time
+	match = true
+	for idx, exp := range iqrWant.Results {
+		switch {
+		case exp.Version != iqrGot.Results[idx].Version:
+			return false, err
+		case exp.ReleaseNotes != iqrGot.Results[idx].ReleaseNotes:
+			return false, err
+		case exp.BaseOS != iqrGot.Results[idx].BaseOS:
+			return false, err
+		}
+	}
+	return match, err
+}
 
 func writeConfigFile() (*bytes.Buffer, error) {
 	seed := `{
@@ -136,8 +194,9 @@ func runFakeRedis() (addr string, err error) {
 	return addr, err
 }
 
-func TestImageQuery(t *testing.T) {
+func TestImageQuery2(t *testing.T) {
 	initLog()
+	// we initialize the fake redis instance
 	addr, err := runFakeRedis()
 	fhidLogger.Loggo.Info("Done starting fake Redis.")
 	if err != nil {
@@ -148,8 +207,11 @@ func TestImageQuery(t *testing.T) {
 		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
 	}
 	// First we need to post some entries to the DB
+	// We have to use the score URL query so we force order or results
+	// since the Redis index set we're using is a sorted set and only
+	// sorts if proper score weights are given.
 	postBody := bytes.NewBufferString(imageGood)
-	req, err := http.NewRequest("POST", "/images", postBody)
+	req, err := http.NewRequest("POST", "/images/?Score=0", postBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +231,7 @@ func TestImageQuery(t *testing.T) {
 
 	// write a second entry
 	postBody = bytes.NewBufferString(imageGood2)
-	req, err = http.NewRequest("POST", "/images", postBody)
+	req, err = http.NewRequest("POST", "/images/?Score=1", postBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,13 +240,20 @@ func TestImageQuery(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-	err = json.Unmarshal([]byte(rr.Body.String()), &j)
-	if err != nil {
-		t.Errorf("Unable to unmarshal response JSON: %s", err)
-	}
-	fmt.Printf("Parsed j.Data into '%s'", j.Data)
 
-	queryBody := bytes.NewBufferString(imageQuery1)
+	// write a third entry that shouldn't match query
+	postBody = bytes.NewBufferString(imageGoodNonMatcher)
+	req, err = http.NewRequest("POST", "/images/?Score=2", postBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	queryBody := bytes.NewBufferString(imageQuery2)
 
 	req, err = http.NewRequest("POST", "/image_query", queryBody)
 	if err != nil {
@@ -193,11 +262,13 @@ func TestImageQuery(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler = http.HandlerFunc(HandlerImagesQuery)
 	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+	// Check the response body is what we expect.
+	expected := strings.Replace(expectedResponseImageSearch, "\n", "", -1)
+	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	if !match {
+		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
+			rr.Body.String(), expected)
 	}
-
 }
 
 func TestImageGetNone(t *testing.T) {
@@ -266,16 +337,11 @@ func TestImagePostGetReal(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-	imageGoodResponse := `{`
-	imageGoodResponse += `"ImageID":"%s",`
-	imageGoodResponse += `"Version":"1.2.3.145",`
-	imageGoodResponse += `"BaseOS":"Ubuntu14.04",`
-	imageGoodResponse += `"ReleaseNotes":"Did the thing"}`
-	imageGoodResponse = fmt.Sprintf(imageGoodResponse, j.Data)
 
 	// Check the response body is what we expect.
-	expected := strings.Replace(imageGoodResponse, "\n", "", -1)
-	if rr.Body.String() != expected {
+	expected := strings.Replace(imageGoodExpected, "\n", "", -1)
+	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	if !match {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
 	}
@@ -326,16 +392,11 @@ func TestImagePostGetFake(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-	imageGoodResponse := `{`
-	imageGoodResponse += `"ImageID":"%s",`
-	imageGoodResponse += `"Version":"1.2.3.145",`
-	imageGoodResponse += `"BaseOS":"Ubuntu14.04",`
-	imageGoodResponse += `"ReleaseNotes":"Did the thing"}`
-	imageGoodResponse = fmt.Sprintf(imageGoodResponse, j.Data)
 
 	// Check the response body is what we expect.
-	expected := strings.Replace(imageGoodResponse, "\n", "", -1)
-	if rr.Body.String() != expected {
+	expected := strings.Replace(imageGoodExpected, "\n", "", -1)
+	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	if !match {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
 	}

@@ -1,10 +1,12 @@
 package fhid
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.build.ge.com/212601587/fhid/fhidLogger"
 
@@ -24,13 +26,13 @@ func HandlerImagesQuery(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fhidLogger.Loggo.Crit("Error processing body", "Error", err)
 		} else {
-			var query imageQuery
+			query := newImageQuery()
 			err = query.processBody(body)
 			results, err := query.execute()
 			if err != nil {
 				http.Error(w, messageErrorHandlerQuery(err), http.StatusInternalServerError)
 			} else {
-				fhidLogger.Loggo.Debug("Got query results", "Results", results)
+				fmt.Fprintf(w, results)
 			}
 		}
 
@@ -69,23 +71,59 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				msg := fmt.Sprintf(`{"Error": "Error fullfilling request for '%s': '%s'"}`, value, err)
 				http.Error(w, msg, http.StatusBadRequest)
-			} else {
-				fhidLogger.Loggo.Debug("Retrieved data successfully", "Data", data)
-				fmt.Fprintf(w, data)
 			}
+			var iqr imageQueryResults
+			var ie imageEntry
+			err = json.Unmarshal([]byte(data), &ie)
+			if err != nil {
+				msg := fmt.Sprintf(`{"Error": "Error processing object retrieved from database. %s}`, err)
+				http.Error(w, msg, http.StatusBadRequest)
+			}
+			iqr.Results = append(iqr.Results, ie)
+			rdata, err := json.Marshal(&iqr)
+			if err != nil {
+				msg := fmt.Sprintf(`{"Error": "Error processing objects retrieved from database. %s}`, err)
+				http.Error(w, msg, http.StatusBadRequest)
+			}
+			fhidLogger.Loggo.Debug("Retrieved data successfully", "Data", string(rdata))
+			fmt.Fprintf(w, string(rdata))
 		}
 
 	case "POST":
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			fhidLogger.Loggo.Info("Error reading body", "Error", err)
-			http.Error(w, `{"Error": "Error reading body."}`, http.StatusBadRequest)
+			msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error reading body."}`, err)
+			http.Error(w, msg, http.StatusBadRequest)
 			return
 		}
-		image := imageEntry{}
-		key, err := image.ParseBodyWrite(body)
+		// have to parse in a score in case we want to override ording in testing
+		u, err := url.Parse(r.URL.String())
+		q, err := url.ParseQuery(u.RawQuery)
 		if err != nil {
-			http.Error(w, messageErrorHandler(err), http.StatusInternalServerError)
+			fhidLogger.Loggo.Error("Error processing URL", "Error", err)
+			msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error processing URL"}`, err)
+			http.Error(w, msg, http.StatusBadRequest)
+		}
+		fhidLogger.Loggo.Debug("Parsed URL query successfully", "Query", q)
+		score := 0
+		key := "Score"
+		value, ok := q[key]
+		if ok {
+			fhidLogger.Loggo.Info("Found score override in url query", "Key", key)
+			fhidLogger.Loggo.Debug("Parsed Score", "Score", value)
+			score, err = strconv.Atoi(value[0])
+			if err != nil {
+				fhidLogger.Loggo.Error("Error parsing score overide, defaulting to zero", "Error", err)
+			}
+		} else {
+			score = 0
+		}
+		image := imageEntry{}
+		key, err = image.ParseBodyWrite(body, score)
+		if err != nil {
+			msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error in body parse and post."}`, err)
+			http.Error(w, msg, http.StatusInternalServerError)
 		} else {
 			fmt.Fprintf(w, messageSuccessData(key))
 

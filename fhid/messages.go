@@ -32,6 +32,10 @@ func messageSuccessData(s string) string {
 	return fmt.Sprintf(`{"Success": "True", "Data": "%s"}`, s)
 }
 
+func messageFailData(s string) string {
+	return fmt.Sprintf(`{"Success": "False", "Data": "%s"}`, s)
+}
+
 func messageMethodNotAllowed() string {
 	return `{"Error":"Method not allowed"}`
 }
