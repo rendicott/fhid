@@ -40,6 +40,7 @@ const imageGood2 = `
 const imageGoodExpected = `
 {
 "Results":[{
+"ImageID":".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"}]}`
@@ -57,12 +58,14 @@ const expectedResponseImageQueryReleaseNotes = `
 "Results": [
 {
 "ImageID": ".*",
+"CreateDate": ".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"
 },
 {
 "ImageID": ".*",
+"CreateDate": ".*",
 "Version":"3.4.3.99",
 "BaseOS":"Centos7",
 "ReleaseNotes":"Did the thing again"
@@ -74,6 +77,8 @@ const expectedResponseImageQueryReleaseNotes = `
 const expectedResponseImageQueryVersion = `
 {
 "Results":[{
+"ImageID":".*",
+"CreateDate": ".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"}]}
@@ -82,6 +87,8 @@ const expectedResponseImageQueryVersion = `
 const expectedResponseImageQueryBaseOS = `
 {
 "Results":[{
+"ImageID":".*",
+"CreateDate": ".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"}]}
