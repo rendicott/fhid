@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -40,6 +41,7 @@ const imageGood2 = `
 const imageGoodExpected = `
 {
 "Results":[{
+"ImageID":".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"}]}`
@@ -57,12 +59,14 @@ const expectedResponseImageQueryReleaseNotes = `
 "Results": [
 {
 "ImageID": ".*",
+"CreateDate": ".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"
 },
 {
 "ImageID": ".*",
+"CreateDate": ".*",
 "Version":"3.4.3.99",
 "BaseOS":"Centos7",
 "ReleaseNotes":"Did the thing again"
@@ -74,6 +78,8 @@ const expectedResponseImageQueryReleaseNotes = `
 const expectedResponseImageQueryVersion = `
 {
 "Results":[{
+"ImageID":".*",
+"CreateDate": ".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"}]}
@@ -82,6 +88,8 @@ const expectedResponseImageQueryVersion = `
 const expectedResponseImageQueryBaseOS = `
 {
 "Results":[{
+"ImageID":".*",
+"CreateDate": ".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "ReleaseNotes":"Did the thing"}]}
@@ -132,7 +140,11 @@ func resultsMatchExpected(results, expected string) (match bool, err error) {
 		return false, err
 	}
 	for idx, exp := range iqrWant.Results {
+		dateMatch, err := regexp.Match(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}`,
+			[]byte(iqrGot.Results[idx].CreateDate))
 		switch {
+		case !dateMatch:
+			return false, err
 		case exp.Version != iqrGot.Results[idx].Version:
 			return false, err
 		case exp.ReleaseNotes != iqrGot.Results[idx].ReleaseNotes:

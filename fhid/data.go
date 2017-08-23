@@ -36,6 +36,7 @@ type imageEntry struct {
 	Version      string
 	BaseOS       string
 	ReleaseNotes string
+	CreateDate   string
 }
 
 type imageQueryResults struct {
@@ -50,8 +51,11 @@ func (i *imageEntry) ParseBodyWrite(rbody []byte, score int) (key string, err er
 	if err != nil {
 		return "", err
 	}
+	t := time.Now()
+	tstring := t.Format("2006-01-02 15:04:05")
 	key = getUUID()
 	i.ImageID = key
+	i.CreateDate = tstring
 	srep, err := json.Marshal(i)
 	if err != nil {
 		return "", err
