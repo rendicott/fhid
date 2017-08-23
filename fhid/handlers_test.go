@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -139,7 +140,11 @@ func resultsMatchExpected(results, expected string) (match bool, err error) {
 		return false, err
 	}
 	for idx, exp := range iqrWant.Results {
+		dateMatch, err := regexp.Match(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}`,
+			[]byte(iqrGot.Results[idx].CreateDate))
 		switch {
+		case !dateMatch:
+			return false, err
 		case exp.Version != iqrGot.Results[idx].Version:
 			return false, err
 		case exp.ReleaseNotes != iqrGot.Results[idx].ReleaseNotes:
