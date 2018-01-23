@@ -32,23 +32,23 @@ func (r ResourceConn) Close() {
 
 // amiEntry just holds basic structure of an AMI ID
 // and an AMI region.
-type amiEntry struct {
+type AmiEntry struct {
 	AmiID     string
 	AmiRegion string
 }
 
 // tags is a struct for holding AMI tags
-type tags struct {
+type Tags struct {
 	Name  string
 	Value string
 }
 
-// releaseNotes holds specific structure for packer
+// ReleaseNotes holds specific structure for packer
 // aws builds
-type releaseNotes struct {
+type ReleaseNotes struct {
 	BuildLog   []string
-	OutputAmis []*amiEntry
-	Tags       []*tags
+	OutputAmis []*AmiEntry
+	Tags       []*Tags
 }
 
 // ImageEntry holds the structure of the image
@@ -57,7 +57,7 @@ type imageEntry struct {
 	ImageID      string
 	Version      string
 	BaseOS       string
-	ReleaseNotes *releaseNotes
+	ReleaseNotes *ReleaseNotes
 	CreateDate   string
 }
 
