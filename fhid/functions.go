@@ -57,7 +57,11 @@ func (iq *imageQuery) search(ie *imageEntry) (match bool, err error) {
 		match, err = iq.stringMatch(ie.BaseOS, iq.BaseOS.StringMatch)
 	case iq.ReleaseNotes.StringMatch != "":
 		fi.Loggo.Debug("Detected StringMatch on ReleaseNotes")
-		match, err = iq.stringMatch(ie.ReleaseNotes, iq.ReleaseNotes.StringMatch)
+		rnb, err := json.Marshal(ie.ReleaseNotes)
+		if err != nil {
+			return match, err
+		}
+		match, err = iq.stringMatch(string(rnb), iq.ReleaseNotes.StringMatch)
 	default:
 		fi.Loggo.Info("No queries could be parsed.")
 	}
@@ -95,7 +99,7 @@ func (iq *imageQuery) execute() (sresults string, err error) {
 	fi.Loggo.Info("Query returned no errors.", "NumberOfResults", len(qresults))
 	var iqr imageQueryResults
 	iqr.Results = qresults
-	bsresults, err := json.Marshal(iqr)
+	bsresults, err := json.MarshalIndent(iqr, "", "    ")
 	return string(bsresults), err
 }
 

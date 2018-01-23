@@ -29,13 +29,34 @@ func (r ResourceConn) Close() {
 	r.Conn.Close()
 }
 
+// amiEntry just holds basic structure of an AMI ID
+// and an AMI region.
+type amiEntry struct {
+	AmiID     string
+	AmiRegion string
+}
+
+// tags is a struct for holding AMI tags
+type tags struct {
+	Name  string
+	Value string
+}
+
+// releaseNotes holds specific structure for packer
+// aws builds
+type releaseNotes struct {
+	BuildLog   []string
+	OutputAmis []*amiEntry
+	Tags       []*tags
+}
+
 // ImageEntry holds the structure of the image
 // entry to push and pull to the database.
 type imageEntry struct {
 	ImageID      string
 	Version      string
 	BaseOS       string
-	ReleaseNotes string
+	ReleaseNotes *releaseNotes
 	CreateDate   string
 }
 
@@ -56,7 +77,7 @@ func (i *imageEntry) ParseBodyWrite(rbody []byte, score int) (key string, err er
 	key = getUUID()
 	i.ImageID = key
 	i.CreateDate = tstring
-	srep, err := json.Marshal(i)
+	srep, err := json.MarshalIndent(i, "", "    ")
 	if err != nil {
 		return "", err
 	}
