@@ -2,6 +2,7 @@ package fhid
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -123,7 +124,9 @@ func Rset(keyname, value string, score int) error {
 }
 
 func getUUID() string {
-	return uuid.NewV4().String()
+	uid := uuid.Must(uuid.NewV4())
+	suid := fmt.Sprintf("%s", uid)
+	return suid
 }
 
 // SetupConnection tests the connection to the Redis datalayer
