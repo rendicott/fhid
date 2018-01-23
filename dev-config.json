@@ -2,5 +2,6 @@
         "RedisEndpoint": "localhost:6379",
         "ListenPort": "8090",
         "ListenHost": "127.0.0.1",
-        "RedisImageIndexSet" : "IMAGE_INDEX"
+        "RedisImageIndexSet" : "IMAGE_INDEX",
+        "AuthorizedGroups": [{"GroupID": "g01135722", "FriendlyName": "@Digital CoreTech Cloud OpsPod"},{"GroupID": "g00919618", "FriendlyName": "@GE Public Cloud"}]
 }

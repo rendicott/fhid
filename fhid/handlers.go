@@ -80,7 +80,7 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, msg, http.StatusBadRequest)
 			}
 			iqr.Results = append(iqr.Results, ie)
-			rdata, err := json.Marshal(&iqr)
+			rdata, err := json.MarshalIndent(&iqr, "", "    ")
 			if err != nil {
 				msg := fmt.Sprintf(`{"Error": "Error processing objects retrieved from database. %s}`, err)
 				http.Error(w, msg, http.StatusBadRequest)
@@ -92,7 +92,7 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			fhidLogger.Loggo.Info("Error reading body", "Error", err)
+			fhidLogger.Loggo.Error("Error reading body", "Error", err)
 			msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error reading body."}`, err)
 			http.Error(w, msg, http.StatusBadRequest)
 			return
@@ -122,6 +122,7 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 		image := imageEntry{}
 		key, err = image.ParseBodyWrite(body, score)
 		if err != nil {
+			fhidLogger.Loggo.Error("Error writing to database", "Error", err)
 			msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error in body parse and post."}`, err)
 			http.Error(w, msg, http.StatusInternalServerError)
 		} else {

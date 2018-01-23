@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.build.ge.com/212601587/fhid/fhidConfig"
@@ -26,7 +25,14 @@ const imageGood = `
 {
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
-"ReleaseNotes":"Did the thing"
+"ReleaseNotes":{
+	"Tags":[{"Name":"test","Value":"test"}],
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1"}
+	]
+}
 }
 `
 
@@ -34,7 +40,14 @@ const imageGood2 = `
 {
 "Version":"3.4.3.99",
 "BaseOS":"Centos7",
-"ReleaseNotes":"Did the thing again"
+"ReleaseNotes":{
+	"Tags":[{"Name":"test","Value":"test"}],
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1"}
+	]
+}
 }
 `
 
@@ -44,55 +57,28 @@ const imageGoodExpected = `
 "ImageID":".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
-"ReleaseNotes":"Did the thing"}]}`
+"ReleaseNotes":{
+	"Tags":[{"Name":"test","Value":"test"}],
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1"}
+	]
+}}]}`
 
 const imageGoodNonMatcher = `
 {
 "Version":"9999999999",
 "BaseOS":"Winders",
-"ReleaseNotes":"bar foo"
+"ReleaseNotes":{
+	"Tags":[{"Name":"test","Value":"test"}],
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1"}
+	]
 }
-`
-
-const expectedResponseImageQueryReleaseNotes = `
-{
-"Results": [
-{
-"ImageID": ".*",
-"CreateDate": ".*",
-"Version":"1.2.3.145",
-"BaseOS":"Ubuntu14.04",
-"ReleaseNotes":"Did the thing"
-},
-{
-"ImageID": ".*",
-"CreateDate": ".*",
-"Version":"3.4.3.99",
-"BaseOS":"Centos7",
-"ReleaseNotes":"Did the thing again"
 }
-]
-}
-`
-
-const expectedResponseImageQueryVersion = `
-{
-"Results":[{
-"ImageID":".*",
-"CreateDate": ".*",
-"Version":"1.2.3.145",
-"BaseOS":"Ubuntu14.04",
-"ReleaseNotes":"Did the thing"}]}
-`
-
-const expectedResponseImageQueryBaseOS = `
-{
-"Results":[{
-"ImageID":".*",
-"CreateDate": ".*",
-"Version":"1.2.3.145",
-"BaseOS":"Ubuntu14.04",
-"ReleaseNotes":"Did the thing"}]}
 `
 
 const imageQueryVersion = `
@@ -103,7 +89,7 @@ const imageQueryVersion = `
 
 const imageQueryReleaseNotes = `
 {
-	"ReleaseNotes": {"StringMatch": ".*Did.*"}
+	"ReleaseNotes": {"StringMatch": ".*ami-12345.*"}
 }
 `
 
@@ -302,12 +288,14 @@ func TestImageQueryReleaseNotes(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler := http.HandlerFunc(HandlerImagesQuery)
 	handler.ServeHTTP(rr, req)
-	// Check the response body is what we expect.
-	expected := strings.Replace(expectedResponseImageQueryReleaseNotes, "\n", "", -1)
-	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	// Check the number of results is what we expect
+	var results imageQueryResults
+	err = json.Unmarshal(rr.Body.Bytes(), &results)
+	expectedResults := 3
+	match := (len(results.Results) == expectedResults)
 	if !match {
-		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
-			rr.Body.String(), expected)
+		t.Errorf("handler returned unexpected number of results: got '%v' want '%v'",
+			len(results.Results), expectedResults)
 	}
 }
 
@@ -341,20 +329,28 @@ func TestImageQueryVersion(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler := http.HandlerFunc(HandlerImagesQuery)
 	handler.ServeHTTP(rr, req)
-	// Check the response body is what we expect.
-	expected := strings.Replace(expectedResponseImageQueryVersion, "\n", "", -1)
-	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	// Check the number of results is what we expect
+	var results imageQueryResults
+	err = json.Unmarshal(rr.Body.Bytes(), &results)
+	expectedResults := 1
+	match := (len(results.Results) == expectedResults)
 	if !match {
-		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
-			rr.Body.String(), expected)
+		t.Errorf("handler returned unexpected number of results: got '%v' want '%v'",
+			len(results.Results), expectedResults)
 	}
 }
 
 func TestImageGetNone(t *testing.T) {
-	err := setup(false, "")
 	initLog()
+	// we initialize the fake redis instance
+	addr, err := runFakeRedis()
+	fhidLogger.Loggo.Info("Done starting fake Redis.")
 	if err != nil {
-		t.Errorf("Unable to connect to Redis for testing: %s", err)
+		t.Errorf("Unable to start fake Redis for testing: %s", err)
+	}
+	err = setup(true, addr)
+	if err != nil {
+		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
 	}
 
 	req, err := http.NewRequest("GET", "/images", nil)
@@ -371,56 +367,6 @@ func TestImageGetNone(t *testing.T) {
 	// Check the response body is what we expect.
 	expected := `{"Error": "Key 'ImageID' not found in URL string."}` + "\n"
 	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
-	}
-}
-
-func TestImagePostGetReal(t *testing.T) {
-	initLog()
-	err := setup(false, "")
-	if err != nil {
-		t.Errorf("Unable to connect to Redis for testing: %s", err)
-	}
-
-	// First we need to post an entry to the DB
-	postBody := bytes.NewBufferString(imageGood)
-	req, err := http.NewRequest("POST", "/images", postBody)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HandlerImages)
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-	var j imagePostResponse
-	err = json.Unmarshal([]byte(rr.Body.String()), &j)
-	if err != nil {
-		t.Errorf("Unable to unmarshal response JSON: %s", err)
-	}
-	fmt.Printf("Parsed j.Data into '%s'", j.Data)
-
-	// now we retrieve the entry
-	uriQuery := fmt.Sprintf("/images?ImageID=%s", j.Data)
-	req, err = http.NewRequest("GET", uriQuery, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rr = httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	// Check the response body is what we expect.
-	expected := strings.Replace(imageGoodExpected, "\n", "", -1)
-	match, err := resultsMatchExpected(rr.Body.String(), expected)
-	if !match {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
 	}
@@ -456,66 +402,13 @@ func TestImageQueryBaseOS(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler := http.HandlerFunc(HandlerImagesQuery)
 	handler.ServeHTTP(rr, req)
-	// Check the response body is what we expect.
-	expected := strings.Replace(expectedResponseImageQueryBaseOS, "\n", "", -1)
-	match, err := resultsMatchExpected(rr.Body.String(), expected)
+	// Check the number of results is what we expect
+	var results imageQueryResults
+	err = json.Unmarshal(rr.Body.Bytes(), &results)
+	expectedResults := 1
+	match := (len(results.Results) == expectedResults)
 	if !match {
-		t.Errorf("handler returned unexpected body: got '%v' want '%v'",
-			rr.Body.String(), expected)
-	}
-}
-
-func TestImagePostGetFake(t *testing.T) {
-	initLog()
-	addr, err := runFakeRedis()
-	fhidLogger.Loggo.Info("Done starting fake Redis.")
-	if err != nil {
-		t.Errorf("Unable to start fake Redis for testing: %s", err)
-	}
-	err = setup(true, addr)
-	if err != nil {
-		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
-	}
-
-	// First we need to post an entry to the DB
-	postBody := bytes.NewBufferString(imageGood)
-	req, err := http.NewRequest("POST", "/images", postBody)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HandlerImages)
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-	var j imagePostResponse
-	err = json.Unmarshal([]byte(rr.Body.String()), &j)
-	if err != nil {
-		t.Errorf("Unable to unmarshal response JSON: %s", err)
-	}
-	fmt.Printf("Parsed j.Data into '%s'", j.Data)
-
-	// now we retrieve the entry
-	uriQuery := fmt.Sprintf("/images?ImageID=%s", j.Data)
-	req, err = http.NewRequest("GET", uriQuery, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rr = httptest.NewRecorder()
-
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	// Check the response body is what we expect.
-	expected := strings.Replace(imageGoodExpected, "\n", "", -1)
-	match, err := resultsMatchExpected(rr.Body.String(), expected)
-	if !match {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+		t.Errorf("handler returned unexpected number of results: got '%v' want '%v'",
+			len(results.Results), expectedResults)
 	}
 }
