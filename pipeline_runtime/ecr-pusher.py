@@ -29,7 +29,7 @@ def add_image(ECR, DOCK):
 
     #Log in
     print "\nLogging in...."
-    output = os.popen("aws ecr get-login --region us-east-1").read()
+    output = os.popen("/home/jenkins/.local/bin/aws ecr get-login --region us-east-1").read()
     os.system(output)
 
     #Docker Tag
