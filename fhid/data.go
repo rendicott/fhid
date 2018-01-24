@@ -49,6 +49,7 @@ type ReleaseNotes struct {
 	BuildLog   []string
 	OutputAmis []*AmiEntry
 	Tags       []*Tags
+	SourceAmi  string
 }
 
 // ImageEntry holds the structure of the image
