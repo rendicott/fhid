@@ -36,6 +36,20 @@ const imageGood = `
 }
 `
 
+const imageBad = `
+{
+"Version":"1.2.3.145",
+"BaseOS":"Ubuntu14.04",
+"BuildNotes":{
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1","AmiTags":[{"Name":"test","Value":"test"}]},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1","AmiTags":[{"Name":"test","Value":"test"}]}
+	]
+},
+"ReleaseNotes":{}
+`
+
 const imageGoodReleaseUpdate = `
 {
 "ReleaseNotes":{
@@ -343,6 +357,91 @@ func seedQueryData() error {
 	}
 	return err
 
+}
+
+func TestStatus(t *testing.T) {
+	initLog()
+	req, err := http.NewRequest("GET", "/healthcheck", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HealthCheck)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusOK)
+	}
+}
+
+func TestBadMethods(t *testing.T) {
+	initLog()
+	// test DELETE method
+	req, err := http.NewRequest("DELETE", "/images", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HandlerImages)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusMethodNotAllowed)
+	}
+	// test PUT method
+	req, err = http.NewRequest("PUT", "/images", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(HandlerImages)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusMethodNotAllowed)
+	}
+	// test HEAD method
+	req, err = http.NewRequest("HEAD", "/images", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(HandlerImages)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusMethodNotAllowed)
+	}
+}
+
+func TestImageBad(t *testing.T) {
+	initLog()
+	// we initialize the fake redis instance
+	addr, err := runFakeRedis()
+	fhidLogger.Loggo.Info("Done starting fake Redis.")
+	if err != nil {
+		t.Errorf("Unable to start fake Redis for testing: %s", err)
+	}
+	err = setup(true, addr)
+	if err != nil {
+		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
+	}
+	// First we need to post some entries to the DB
+	// We have to use the score URL query so we force order or results
+	// since the Redis index set we're using is a sorted set and only
+	// sorts if proper score weights are given.
+	postBody := bytes.NewBufferString(imageGood)
+	req, err := http.NewRequest("POST", "/images/?Score=0", postBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HandlerImages)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusBadRequest {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusBadRequest)
+	}
 }
 
 func TestImageUpdate(t *testing.T) {

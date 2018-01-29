@@ -106,7 +106,37 @@ Would return results:
 }
 ```
 
+## GET
 
+You can also just do a targeted `GET` if you include the `?ImageID=<id>` image ID in the query string parameter. 
+
+Example:
+
+```
+https://images.company.com/v1.0/images?ImageID=30095350-dd02-4200-bf12-894f409a653f
+```
+
+## PATCH
+
+You can update the `ReleaseNotes` section on an existing entry by using the `PATCH` method on the image endpoint and including the image ID you'd like to update. 
+
+```
+curl -XPATCH https://images.company.com/v1.0/image?ImageID=30095350-dd02-4200-bf12-894f409a653f -d '{
+"ReleaseNotes":{
+	"ReleaseNote": "Pushing out a thing to do that dingy",
+	"Amis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
+		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
+	]
+}
+}'
+```
+
+Currently only the `ReleaseNotes` attribute of the object can be updated. 
 
 ## supported queries
 
