@@ -25,12 +25,28 @@ const imageGood = `
 {
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
-"ReleaseNotes":{
-	"Tags":[{"Name":"test","Value":"test"}],
+"BuildNotes":{
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
-		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
-		{"AmiID": "ami-54321","AmiRegion":"us-west-1"}
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1","AmiTags":[{"Name":"test","Value":"test"}]},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1","AmiTags":[{"Name":"test","Value":"test"}]}
+	]
+},
+"ReleaseNotes":{}
+}
+`
+
+const imageGoodReleaseUpdate = `
+{
+"ReleaseNotes":{
+	"ReleaseNote": "Pushing out a thing to do that dingy",
+	"Amis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
+		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
 	]
 }
 }
@@ -40,7 +56,7 @@ const imageGood2 = `
 {
 "Version":"3.4.3.99",
 "BaseOS":"Centos7",
-"ReleaseNotes":{
+"BuildNotes":{
 	"Tags":[{"Name":"test","Value":"test"}],
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
@@ -57,7 +73,7 @@ const imageGoodExpected = `
 "ImageID":".*",
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
-"ReleaseNotes":{
+"BuildNotes":{
 	"Tags":[{"Name":"test","Value":"test"}],
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
@@ -70,12 +86,64 @@ const imageGoodNonMatcher = `
 {
 "Version":"9999999999",
 "BaseOS":"Winders",
-"ReleaseNotes":{
+"BuildNotes":{
 	"Tags":[{"Name":"test","Value":"test"}],
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
 		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
 		{"AmiID": "ami-54321","AmiRegion":"us-west-1"}
+	]
+}
+}
+`
+
+const imageWithReleaseNotes = `
+{
+"Version":"9999999999",
+"BaseOS":"Arch",
+"BuildNotes":{
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321"]}
+	]
+},
+"ReleaseNotes":{
+	"ReleaseNote": "Pushing out a thing to do that thingy",
+	"Amis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
+		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
+	]
+}
+}
+`
+
+const imageWithReleaseNotes2 = `
+{
+"Version":"9999999998",
+"BaseOS":"Arch",
+"BuildNotes":{
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321"]}
+	]
+},
+"ReleaseNotes":{
+	"ReleaseNote": "Pushing out a thing to do that dingy",
+	"Amis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
+		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
 	]
 }
 }
@@ -87,15 +155,21 @@ const imageQueryVersion = `
 }
 `
 
-const imageQueryReleaseNotes = `
+const imageQueryBuildNotes = `
 {
-	"ReleaseNotes": {"StringMatch": ".*ami-12345.*"}
+	"BuildNotes": {"StringMatch": ".*ami-12345.*"}
 }
 `
 
 const imageQueryBaseOS = `
 {
 	"BaseOS": {"StringMatch": ".*Ubuntu.*"}
+}
+`
+
+const imageQueryReleaseNotes = `
+{
+	"ReleaseNotes": {"StringMatch": ".*thingy.*"}
 }
 `
 
@@ -133,7 +207,7 @@ func resultsMatchExpected(results, expected string) (match bool, err error) {
 			return false, err
 		case exp.Version != iqrGot.Results[idx].Version:
 			return false, err
-		case exp.ReleaseNotes != iqrGot.Results[idx].ReleaseNotes:
+		case exp.BuildNotes != iqrGot.Results[idx].BuildNotes:
 			return false, err
 		case exp.BaseOS != iqrGot.Results[idx].BaseOS:
 			return false, err
@@ -199,7 +273,7 @@ func setup(fake bool, addr string) error {
 }
 
 func initLog() {
-	fhidLogger.SetLogger(false, "fhid_test.log.json", "debug")
+	fhidLogger.SetLogger(true, "fhid_test.log.json", "debug")
 }
 
 func runFakeRedis() (addr string, err error) {
@@ -255,7 +329,115 @@ func seedQueryData() error {
 		fhidLogger.Loggo.Error("handler returned wrong status code",
 			"Got", status, "Want", http.StatusOK)
 	}
+
+	// write another entry test new releasenotes struct
+	postBody = bytes.NewBufferString(imageWithReleaseNotes)
+	req, err = http.NewRequest("POST", "/images/?Score=3", postBody)
+	if err != nil {
+		return err
+	}
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusOK)
+	}
 	return err
+
+}
+
+func TestImageUpdate(t *testing.T) {
+	initLog()
+	// we initialize the fake redis instance
+	addr, err := runFakeRedis()
+	fhidLogger.Loggo.Info("Done starting fake Redis.")
+	if err != nil {
+		t.Errorf("Unable to start fake Redis for testing: %s", err)
+	}
+	err = setup(true, addr)
+	if err != nil {
+		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
+	}
+	// First we need to post some entries to the DB
+	// We have to use the score URL query so we force order or results
+	// since the Redis index set we're using is a sorted set and only
+	// sorts if proper score weights are given.
+	postBody := bytes.NewBufferString(imageGood)
+	req, err := http.NewRequest("POST", "/images/?Score=0", postBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HandlerImages)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		fhidLogger.Loggo.Error("handler returned wrong status code",
+			"Got", status, "Want", http.StatusOK)
+	}
+	var j imagePostResponse
+	err = json.Unmarshal([]byte(rr.Body.String()), &j)
+	if err != nil {
+		fhidLogger.Loggo.Error("Unable to unmarshal response JSON",
+			"Error", err)
+		t.Fatal(err)
+	}
+	imageID := j.Data
+	// set up response recorder
+	rr = httptest.NewRecorder()
+	queryBody := bytes.NewBufferString(imageGoodReleaseUpdate)
+	urlString := fmt.Sprintf("/image?ImageID=%s", imageID)
+	req, err = http.NewRequest("PATCH", urlString, queryBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(HandlerImages)
+	handler.ServeHTTP(rr, req)
+	match := (rr.Code == 200)
+	if !match {
+		t.Errorf("handler returned unexpected results: got '%v' want '%v'",
+			rr.Code, 200)
+	}
+}
+
+func TestImageQueryBuildNotes(t *testing.T) {
+	initLog()
+	// we initialize the fake redis instance
+	addr, err := runFakeRedis()
+	fhidLogger.Loggo.Info("Done starting fake Redis.")
+	if err != nil {
+		t.Errorf("Unable to start fake Redis for testing: %s", err)
+	}
+	err = setup(true, addr)
+	if err != nil {
+		t.Errorf("Unable to connect to fake Redis for testing: %s", err)
+	}
+	// First we need to post some entries to the DB
+	// We have to use the score URL query so we force order or results
+	// since the Redis index set we're using is a sorted set and only
+	// sorts if proper score weights are given.
+	err = seedQueryData()
+	if err != nil {
+		t.Errorf("Error seeding query data. '%s'", err)
+	}
+	// set up response recorder
+	rr := httptest.NewRecorder()
+	queryBody := bytes.NewBufferString(imageQueryBuildNotes)
+	req, err := http.NewRequest("POST", "/image_query", queryBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr = httptest.NewRecorder()
+	handler := http.HandlerFunc(HandlerImagesQuery)
+	handler.ServeHTTP(rr, req)
+	// Check the number of results is what we expect
+	var results imageQueryResults
+	err = json.Unmarshal(rr.Body.Bytes(), &results)
+	expectedResults := 3
+	match := (len(results.Results) == expectedResults)
+	if !match {
+		t.Errorf("handler returned unexpected number of results: got '%v' want '%v'",
+			len(results.Results), expectedResults)
+	}
 }
 
 func TestImageQueryReleaseNotes(t *testing.T) {
@@ -281,7 +463,7 @@ func TestImageQueryReleaseNotes(t *testing.T) {
 	// set up response recorder
 	rr := httptest.NewRecorder()
 	queryBody := bytes.NewBufferString(imageQueryReleaseNotes)
-	req, err := http.NewRequest("POST", "/image_query", queryBody)
+	req, err := http.NewRequest("POST", "/query", queryBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +473,7 @@ func TestImageQueryReleaseNotes(t *testing.T) {
 	// Check the number of results is what we expect
 	var results imageQueryResults
 	err = json.Unmarshal(rr.Body.Bytes(), &results)
-	expectedResults := 3
+	expectedResults := 1
 	match := (len(results.Results) == expectedResults)
 	if !match {
 		t.Errorf("handler returned unexpected number of results: got '%v' want '%v'",

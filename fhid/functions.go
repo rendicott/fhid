@@ -25,6 +25,7 @@ func newImageQuerySub() *imageQuerySub {
 type imageQuery struct {
 	Version      *imageQuerySub
 	BaseOS       *imageQuerySub
+	BuildNotes   *imageQuerySub
 	ReleaseNotes *imageQuerySub
 }
 
@@ -34,20 +35,21 @@ func newImageQuery() imageQuery {
 	iq := imageQuery{}
 	iq.Version = newImageQuerySub()
 	iq.BaseOS = newImageQuerySub()
+	iq.BuildNotes = newImageQuerySub()
 	iq.ReleaseNotes = newImageQuerySub()
 	return iq
 }
 
 func (iq *imageQuery) processBody(rbody []byte) error {
 	err := json.Unmarshal(rbody, &iq)
-	fi.Loggo.Info("Processed query", "imageQuery.ReleaseNotes.StringMatch", iq.ReleaseNotes.StringMatch)
+	fi.Loggo.Info("Processed query", "imageQuery.BuildNotes.StringMatch", iq.BuildNotes.StringMatch)
 	return err
 }
 
 // imageQuery loops through the query properties and tries to detect
 // which type of query search to run then executes and returns
-// true if the search matches the given imageEntry
-func (iq *imageQuery) search(ie *imageEntry) (match bool, err error) {
+// true if the search matches the given buildEntry
+func (iq *imageQuery) search(ie *buildEntry) (match bool, err error) {
 	switch {
 	case iq.Version.StringMatch != "":
 		fi.Loggo.Debug("Detected StringMatch on Version")
@@ -62,6 +64,13 @@ func (iq *imageQuery) search(ie *imageEntry) (match bool, err error) {
 			return match, err
 		}
 		match, err = iq.stringMatch(string(rnb), iq.ReleaseNotes.StringMatch)
+	case iq.BuildNotes.StringMatch != "":
+		fi.Loggo.Debug("Detected StringMatch on BuildNotes")
+		rnb, err := json.Marshal(ie.BuildNotes)
+		if err != nil {
+			return match, err
+		}
+		match, err = iq.stringMatch(string(rnb), iq.BuildNotes.StringMatch)
 	default:
 		fi.Loggo.Info("No queries could be parsed.")
 	}
@@ -69,7 +78,7 @@ func (iq *imageQuery) search(ie *imageEntry) (match bool, err error) {
 }
 
 func (iq *imageQuery) execute() (sresults string, err error) {
-	var qresults []imageEntry
+	var qresults []buildEntry
 	fi.Loggo.Info("Executing query...")
 	results, err := Rmembers(fhidConfig.Config.RedisImageIndexSet)
 	if err != nil {
@@ -83,7 +92,7 @@ func (iq *imageQuery) execute() (sresults string, err error) {
 			fi.Loggo.Error("Error retreiving key.", "Error", err, "Key", key)
 		}
 		fi.Loggo.Debug("Got value", "Value", val)
-		var ie imageEntry
+		var ie buildEntry
 		err = json.Unmarshal([]byte(val), &ie)
 		if err != nil {
 			fi.Loggo.Error("Error unmarshaling retrieved value.", "Error", err)

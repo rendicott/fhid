@@ -73,7 +73,7 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, msg, http.StatusBadRequest)
 			}
 			var iqr imageQueryResults
-			var ie imageEntry
+			var ie buildEntry
 			err = json.Unmarshal([]byte(data), &ie)
 			if err != nil {
 				msg := fmt.Sprintf(`{"Error": "Error processing object retrieved from database. %s}`, err)
@@ -119,7 +119,7 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 		} else {
 			score = 0
 		}
-		image := imageEntry{}
+		image := buildEntry{}
 		key, err = image.ParseBodyWrite(body, score)
 		if err != nil {
 			fhidLogger.Loggo.Error("Error writing to database", "Error", err)
@@ -128,6 +128,70 @@ func HandlerImages(w http.ResponseWriter, r *http.Request) {
 		} else {
 			fmt.Fprintf(w, messageSuccessData(key))
 
+		}
+	case "PATCH":
+		fhidLogger.Loggo.Info("Request URL captured for patch", "URL", r.URL)
+		u, err := url.Parse(r.URL.String())
+		q, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			fhidLogger.Loggo.Error("Error processing URL", "Error", err)
+			http.Error(w, `{"Error": "Error processing URL"}`, http.StatusBadRequest)
+		}
+		fhidLogger.Loggo.Debug("Parsed URL query successfully", "Query", q)
+		key := "ImageID"
+		value, ok := q[key]
+		if !ok {
+			fhidLogger.Loggo.Info("Key not found in URL string", "Key", key)
+		}
+		fhidLogger.Loggo.Debug("Parsed ImageID", "ImageID", value)
+		// now parse the body into a struct
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fhidLogger.Loggo.Error("Error reading body", "Error", err)
+			msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error reading body."}`, err)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+		var rnotes buildEntry
+		err = json.Unmarshal(body, &rnotes)
+		if err != nil {
+			fhidLogger.Loggo.Error("Error parsing body", "Error", err)
+			msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error parsing body."}`, err)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+		// now we should  have a buildEntry object, we'll find the desired
+		// imageID and update just the release notes
+		if len(value) < 1 {
+			msg := fmt.Sprintf(`{"Error": "Key '%s' not found in URL string."}`, key)
+			http.Error(w, msg, http.StatusBadRequest)
+		} else {
+			data, err := Rget(value[0])
+			if err != nil {
+				msg := fmt.Sprintf(`{"Error": "Error fullfilling request for '%s': '%s'"}`, value, err)
+				http.Error(w, msg, http.StatusBadRequest)
+			}
+			var ie buildEntry
+			err = json.Unmarshal([]byte(data), &ie)
+			if err != nil {
+				msg := fmt.Sprintf(`{"Error": "Error processing object retrieved from database. %s}`, err)
+				http.Error(w, msg, http.StatusBadRequest)
+			}
+			// overwrite the entry's release notes from those of the body
+			ie.ReleaseNotes = rnotes.ReleaseNotes
+			// marshal and write to database
+			writedata, err := json.Marshal(ie)
+			if err != nil {
+				msg := fmt.Sprintf(`{"Error": "Error updating object retrieved from database. %s}`, err)
+				http.Error(w, msg, http.StatusBadRequest)
+			}
+			err = Rset(value[0], string(writedata), 0)
+			if err != nil {
+				fhidLogger.Loggo.Error("Error writing to database", "Error", err)
+				msg := fmt.Sprintf(`{"Success": "False", "Data": "%s", "Error": "Error in body parse and post."}`, err)
+				http.Error(w, msg, http.StatusInternalServerError)
+			}
+			fmt.Fprintf(w, messageSuccessData(value[0]))
 		}
 	case "PUT":
 		http.Error(w, messageMethodNotAllowed(), http.StatusMethodNotAllowed)

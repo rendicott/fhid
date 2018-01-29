@@ -13,33 +13,54 @@ and then `GET` to the `/images` handler with a query like `/images?ImageId=d07d1
 
 _Testing_
 
-To test make sure you have a local Redis server running on `127.0.0.1:6379` and then run `go test ./... -v` from the root of the repo.
+Run `go test ./... -v` from the root of the repo.
 
 
 # Usage
 
 ## Post
 
-Submitting an entry would look something like this:
+Submitting an entry would look something like this flow. The first step would be to post the results of an image build:
 ```
 curl -XPOST https://images.company.com/v1.0/images -d '{
-"Version": "3.4.5",
-"BaseOS": "Mint14.04",
-"ReleaseNotes": "The quick brown fox jumps over the lazy dog."
-}'
-
-curl -XPOST https://images.company.com/v1.0/images -d '{
-"Version": "3.4.6",
-"BaseOS": "Mint14.04",
-"ReleaseNotes": "The quick brown fox jumps over the lazy dog."
-}'
-
-curl -XPOST https://images.company.com/v1.0/images -d '{
-"Version": "3.4.7",
-"BaseOS": "Mint14.04",
-"ReleaseNotes": "The quick brown fox jumps over the lazy dog."
+"Version":"1.2.4",
+"BaseOS":"Arch",
+"BuildNotes":{
+	"BuildLog": ["line one","line two"],
+	"OutputAmis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321"]}
+	]
+},
+"ReleaseNotes":{}
 }'
 ```
+
+Which would return:
+
+```
+{"Success": "True", "Data": "e9373eb2-b17f-4344-a933-4db2d358c020"}
+```
+
+Then once the resulting output AMI has been tested you would then release it to the world and then update the record like so:
+```
+curl -XUPDATE https://images.company.com/v1.0/images?ImageID=e9373eb2-b17f-4344-a933-4db2d358c020 -d '{
+
+"ReleaseNotes":{
+	"ReleaseNote": "Pushing out a thing to do that dingy",
+	"Amis": [
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
+		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
+		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
+	]
+}
+}'
+```
+
 Any other fields will just be ignored. 
 
 ## Query
@@ -70,23 +91,17 @@ Would return results:
 ```
 {
 	"Results": [{
-		"ImageID": "5ea85df1-7c81-4061-aee2-613e97aa4b66",
-		"Version": "3.4.5",
-		"BaseOS": "Mint14.04",
-		"ReleaseNotes": "The quick brown fox jumps over the lazy dog.",
+		"ImageID": "e9373eb2-b17f-4344-a933-4db2d358c020",
+		"Version": "1.2.4",
+		"BaseOS": "Arch",
+		"BuildNotes": {
+            "BuildLog": ["line one","line two"],
+            "OutputAmis": [
+                {"AmiID": "ami-54321","AmiRegion":"us-west-1", 
+                "AmiTags":[{"Name":"test","Value":"test"}],
+                "AmiSharedTo": ["1234567","7654321"]}
+            ]},
 		"CreateDate": "2017-08-22 22:40:04"
-	}, {
-		"ImageID": "89aeecc1-9072-4b74-a3f5-8177ecf018ef",
-		"Version": "3.4.6",
-		"BaseOS": "Mint14.04",
-		"ReleaseNotes": "The quick brown fox jumps over the lazy dog.",
-		"CreateDate": "2017-08-22 22:40:48"
-	}, {
-		"ImageID": "d896cb26-206e-48de-9467-ae0855b75710",
-		"Version": "3.4.7",
-		"BaseOS": "Mint14.04",
-		"ReleaseNotes": "The quick brown fox jumps over the lazy dog.",
-		"CreateDate": "2017-08-22 22:40:54"
 	}]
 }
 ```

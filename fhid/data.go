@@ -30,45 +30,54 @@ func (r ResourceConn) Close() {
 	r.Conn.Close()
 }
 
-// amiEntry just holds basic structure of an AMI ID
+// AmiEntry just holds basic structure of an AMI ID
 // and an AMI region.
 type AmiEntry struct {
-	AmiID     string
-	AmiRegion string
+	AmiID       string
+	AmiRegion   string
+	AmiSharedTo []string
+	AmiTags     []*Tags
 }
 
-// tags is a struct for holding AMI tags
+// Tags is a struct for holding AMI tags
 type Tags struct {
 	Name  string
 	Value string
 }
 
-// ReleaseNotes holds specific structure for packer
+// BuildNotes holds specific structure for packer
 // aws builds
-type ReleaseNotes struct {
+type BuildNotes struct {
 	BuildLog   []string
 	OutputAmis []*AmiEntry
-	Tags       []*Tags
 	SourceAmi  string
 }
 
-// ImageEntry holds the structure of the image
+// ReleaseNotes holds specific structure for packer
+// aws builds
+type ReleaseNotes struct {
+	ReleaseNote string
+	Amis        []*AmiEntry
+}
+
+// buildEntry holds the structure of the image
 // entry to push and pull to the database.
-type imageEntry struct {
+type buildEntry struct {
 	ImageID      string
 	Version      string
 	BaseOS       string
 	ReleaseNotes *ReleaseNotes
+	BuildNotes   *BuildNotes
 	CreateDate   string
 }
 
 type imageQueryResults struct {
-	Results []imageEntry
+	Results []buildEntry
 }
 
-// ParseBodyWrite is the method to parse the body of the ImageEntry object from
+// ParseBodyWrite is the method to parse the body of the buildEntry object from
 // the web request.
-func (i *imageEntry) ParseBodyWrite(rbody []byte, score int) (key string, err error) {
+func (i *buildEntry) ParseBodyWrite(rbody []byte, score int) (key string, err error) {
 	fhidLogger.Loggo.Info("Processing image body request", "Body", string(rbody))
 	err = json.Unmarshal(rbody, i)
 	if err != nil {
