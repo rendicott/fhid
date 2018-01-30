@@ -41,7 +41,7 @@ type AmiEntry struct {
 
 // Tags is a struct for holding AMI tags
 type Tags struct {
-	Name  string
+	Key   string
 	Value string
 }
 
@@ -58,6 +58,7 @@ type BuildNotes struct {
 type ReleaseNotes struct {
 	ReleaseNote string
 	Amis        []*AmiEntry
+	ReleaseDate string
 }
 
 // buildEntry holds the structure of the image

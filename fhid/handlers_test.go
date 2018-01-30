@@ -28,8 +28,8 @@ const imageGood = `
 "BuildNotes":{
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
-		{"AmiID": "ami-12345","AmiRegion":"us-east-1","AmiTags":[{"Name":"test","Value":"test"}]},
-		{"AmiID": "ami-54321","AmiRegion":"us-west-1","AmiTags":[{"Name":"test","Value":"test"}]}
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1","AmiTags":[{"Key":"test","Value":"test"}]},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1","AmiTags":[{"Key":"test","Value":"test"}]}
 	]
 },
 "ReleaseNotes":{}
@@ -43,8 +43,8 @@ const imageBad = `
 "BuildNotes":{
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
-		{"AmiID": "ami-12345","AmiRegion":"us-east-1","AmiTags":[{"Name":"test","Value":"test"}]},
-		{"AmiID": "ami-54321","AmiRegion":"us-west-1","AmiTags":[{"Name":"test","Value":"test"}]}
+		{"AmiID": "ami-12345","AmiRegion":"us-east-1","AmiTags":[{"Key":"test","Value":"test"}]},
+		{"AmiID": "ami-54321","AmiRegion":"us-west-1","AmiTags":[{"Key":"test","Value":"test"}]}
 	]
 },
 "ReleaseNotes":{}
@@ -56,12 +56,13 @@ const imageGoodReleaseUpdate = `
 	"ReleaseNote": "Pushing out a thing to do that dingy",
 	"Amis": [
 		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
 		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
-	]
+	],
+	"ReleaseDate": "2018-01-30 04:36:25"
 }
 }
 `
@@ -71,7 +72,7 @@ const imageGood2 = `
 "Version":"3.4.3.99",
 "BaseOS":"Centos7",
 "BuildNotes":{
-	"Tags":[{"Name":"test","Value":"test"}],
+	"Tags":[{"Key":"test","Value":"test"}],
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
 		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
@@ -88,7 +89,7 @@ const imageGoodExpected = `
 "Version":"1.2.3.145",
 "BaseOS":"Ubuntu14.04",
 "BuildNotes":{
-	"Tags":[{"Name":"test","Value":"test"}],
+	"Tags":[{"Key":"test","Value":"test"}],
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
 		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
@@ -101,7 +102,7 @@ const imageGoodNonMatcher = `
 "Version":"9999999999",
 "BaseOS":"Winders",
 "BuildNotes":{
-	"Tags":[{"Name":"test","Value":"test"}],
+	"Tags":[{"Key":"test","Value":"test"}],
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
 		{"AmiID": "ami-12345","AmiRegion":"us-east-1"},
@@ -119,7 +120,7 @@ const imageWithReleaseNotes = `
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
 		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321"]}
 	]
 },
@@ -127,12 +128,13 @@ const imageWithReleaseNotes = `
 	"ReleaseNote": "Pushing out a thing to do that thingy",
 	"Amis": [
 		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
 		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
-	]
+	],
+	"ReleaseDate": "2018-01-30 04:36:25"
 }
 }
 `
@@ -145,7 +147,7 @@ const imageWithReleaseNotes2 = `
 	"BuildLog": ["line one","line two"],
 	"OutputAmis": [
 		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321"]}
 	]
 },
@@ -153,12 +155,13 @@ const imageWithReleaseNotes2 = `
 	"ReleaseNote": "Pushing out a thing to do that dingy",
 	"Amis": [
 		{"AmiID": "ami-54321","AmiRegion":"us-west-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]},
 		{"AmiID": "ami-54322","AmiRegion":"us-east-1", 
-		 "AmiTags":[{"Name":"test","Value":"test"}],
+		 "AmiTags":[{"Key":"test","Value":"test"}],
 		 "AmiSharedTo": ["1234567","7654321","67183674","10239485"]}
-	]
+	],
+	"ReleaseDate": "2018-01-30 04:36:25"
 }
 }
 `
